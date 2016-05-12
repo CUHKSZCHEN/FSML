@@ -1,7 +1,7 @@
 module DataTypes
 
     open System.IO
-    open System.Collections.Generic
+
     type Variable = 
         | Y of int
         | X of int*double  
