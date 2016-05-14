@@ -17,7 +17,7 @@ module LogisticRegression
     
     let SoftThresholdingOperator (b:double, lambda:double) = 
         if b >0.0 then b-lambda else
-            if b>0. then b+lambda else 0.0 
+            if b<0.0 then b+lambda else 0.0 
     
     let rec update f (parameter:Vector<double>) (eps:double) (iter:int) (maxIter:int) =
         if iter > maxIter then parameter
