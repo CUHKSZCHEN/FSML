@@ -14,11 +14,24 @@ module LogisticRegression
 
     let Loglik (p:Vector<double>) (y:Vector<double>)=
             y*p.PointwiseLog() + (y.Negate().Add(1.0))*p.Negate().Add(1.0).PointwiseLog()
+    
+    let SoftThresholdingOperator (b:double, lambda:double) = 
+        if b >0.0 then b-lambda else
+            if b>0. then b+lambda else 0.0 
+    
+    let rec update f (parameter:Vector<double>) (eps:double) (iter:int) (maxIter:int) =
+        if iter > maxIter then parameter
+        else
+            let param0,loss0 = f parameter
+            let param1,loss1 = f param0
+            if loss1-loss0 <  eps then parameter
+            else update f param1 eps (iter+1) maxIter
 
     type LR (x:Matrix<double>,y:Vector<double>)=
        
-        let eps=1e-6
         let xWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
+        member val eps = 1e-6 with get,set
+        member val maxIter = 100 with get,set
 
         member this.Predict (x:Vector<double>) =
             let x1= DenseVector.create (x.Count+1) 1.0
@@ -34,11 +47,12 @@ module LogisticRegression
 
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
 
-        member private this.Update beta  =
+        member this.Update (beta:Vector<double>)  =
             let p = (this.PredictWith1 (beta, xWith1) ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
-            do  Loglik p y |> printfn "Loglikelihood: %A"          
+            let loglik= Loglik p y
+            do loglik |> printfn "Loglikelihood: %A"          
             let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
             let z= xWith1 * beta + w.Inverse() *  (y-p)
-            (xWith1.Transpose() * w *xWith1).Inverse() * xWith1.Transpose() * w*z            
+            (xWith1.Transpose() * w *xWith1).Inverse() * xWith1.Transpose() * w*z,loglik
 
-        member this.Fit k= for i in [1..k] do  this.Beta <- (this.Update this.Beta)
+        member this.Fit = this.Beta <- (update this.Update this.Beta this.eps 0 this.maxIter)
