@@ -36,9 +36,9 @@ module LogisticRegression
 
         member private this.Update beta  =
             let p = (this.PredictWith1 (beta, xWith1) ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
-            let loglikNew=Loglik p y          
+            do  Loglik p y |> printfn "Loglikelihood: %A"          
             let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
             let z= xWith1 * beta + w.Inverse() *  (y-p)
-            (xWith1.Transpose() * w *xWith1).Inverse() * xWith1.Transpose() * w*z          
+            (xWith1.Transpose() * w *xWith1).Inverse() * xWith1.Transpose() * w*z            
 
         member this.Fit k= for i in [1..k] do  this.Beta <- (this.Update this.Beta)
