@@ -42,23 +42,16 @@ module DataTypes
 
 
     type readData (filePath: string)=
-
-        member this.AddToXDict ((xDict:Dictionary<int,List<Option<double>>>)) (entry:Map<int,double>)=
-            for f in this.Features do 
-                if entry.ContainsKey f then xDict.[f].Add (Some entry.[f]) else xDict.[f].Add None
-
-        member this.ParseVariable (e:string) = 
+        let parseVariable (e:string) = 
             if e.StartsWith "+"  then Y 1.
             else if e.StartsWith "-" then Y 0.
             else let split = e.Split [|':'|]
                  X (int split.[0],double split.[1])
-
-        member this.ParseLine (line : string) =
-            line.Split ([|' ';'\t'|], System.StringSplitOptions.RemoveEmptyEntries) |> Array.map this.ParseVariable
         
-        
-        
-        member this.ParseEntry (row: array<Variable>) = 
+        let parseLine (line : string) =
+            line.Split ([|' ';'\t'|], System.StringSplitOptions.RemoveEmptyEntries) |> Array.map parseVariable
+         
+        let parseEntry (row: array<Variable>) = 
             if row.Length=1 
             then (match row.[0] with 
                  |Y y -> y 
@@ -69,27 +62,31 @@ module DataTypes
                     (fun x -> match x with     
                                 |X (feature,value) -> Some (feature,value)
                                 |_ -> None ) |> Map.ofSeq)
-             
-        member this.Rows = seq {
+        
+        let allRows = seq {
             use sr= new StreamReader (filePath)
             while not sr.EndOfStream do
-            yield sr.ReadLine()} |> Seq.map this.ParseLine |> Seq.map this.ParseEntry
+            yield sr.ReadLine()} |> Seq.map parseLine |> Seq.map parseEntry
+        
+        let getColumn (f:int) (rows:seq<Map<int,double>>)=seq {for row in rows -> (if row.ContainsKey f then (Some row.[f]) else None)}
+
+        member private this.AddToXDict ((xDict:Dictionary<int,List<Option<double>>>)) (entry:Map<int,double>)=
+            for f in this.Features do 
+                if entry.ContainsKey f then xDict.[f].Add (Some entry.[f]) else xDict.[f].Add None
 
         member this.Features =
-            this.Rows |> Seq.map snd |> Seq.fold (fun acc elem -> acc + (elem |> Map.toSeq |> Seq.map fst |> Set.ofSeq)) Set.empty<int>              
-        
-        member this.GetColumn (f:int) (rows:seq<Map<int,double>>)=seq {for row in rows -> (if row.ContainsKey f then (Some row.[f]) else None)}
-        
+            allRows |> Seq.map snd |> Seq.fold (fun acc elem -> acc + (elem |> Map.toSeq |> Seq.map fst |> Set.ofSeq)) Set.empty<int>              
+               
         member this.XByColumns = 
-            let rows=this.Rows|> Seq.map snd
+            let rows=allRows|> Seq.map snd
             seq{
-            for f in this.Features ->  (f,rows |> this.GetColumn f)} |> Map.ofSeq
+            for f in this.Features ->  (f,rows |> getColumn f)} |> Map.ofSeq
 
         member this.N= 
-            Seq.length this.Rows
+            Seq.length allRows
 
         member this.CreateFold k seed  =
             if k>=this.N then raiseExcetion "too many folds"
             else
                 let rnd = System.Random(seed)
-                this.Rows |> Seq.groupBy (fun _ -> rnd.Next() % k) |> Map.ofSeq
+                allRows |> Seq.groupBy (fun _ -> rnd.Next() % k) |> Map.ofSeq
