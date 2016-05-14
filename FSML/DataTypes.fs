@@ -28,28 +28,17 @@ module DataTypes
 
         member this.GetTest (fold: int)= foldedData .[fold]
 
-        member this.XByColumns rows = 
-            let Rows=rows|> Seq.map snd
-            seq{
-            for f in (Set.toList features |> List.sort) ->  (f,Rows |> this.GetColumn f)} |> Map.ofSeq
-
         member this.GetColumn (f:int) (rows:seq<Map<int,double>>)=seq {for row in rows -> (if row.ContainsKey f then row.[f] else raiseExcetion "missing value" )}
 
         member this.Train (fold:int)=
-            let xy=this.GetTrain fold
-            let x = this.XByColumns xy
-            let y = xy |> Seq.map fst |> DenseVector.ofSeq  
-            let columnSeq = x |> Map.toSeq |> Seq.map snd 
-            let xMatrix = DenseMatrix.ofColumnSeq columnSeq         
-            xMatrix,y
+            this.GetTrain fold |> List.ofSeq |> List.unzip |> 
+                        (fun (a,b) -> (seq{for f in (Set.toList features |> List.sort) ->  (f,b |> this.GetColumn f)} |> Map.ofSeq |> Map.toSeq |> Seq.map snd |> DenseMatrix.ofColumnSeq ,a|> DenseVector.ofSeq))      
+
         
         member this.Test (fold:int)=
-            let xy=this.GetTest fold
-            let x = this.XByColumns xy
-            let y = xy |> Seq.map fst |> DenseVector.ofSeq 
-            let columnSeq = x |> Map.toSeq |> Seq.map snd 
-            let xMatrix = DenseMatrix.ofColumnSeq columnSeq         
-            xMatrix,y
+            this.GetTest fold |> List.ofSeq |> List.unzip |> 
+                        (fun (a,b) -> (seq{for f in (Set.toList features |> List.sort) ->  (f,b |> this.GetColumn f)} |> Map.ofSeq |> Map.toSeq |> Seq.map snd |> DenseMatrix.ofColumnSeq ,a|> DenseVector.ofSeq))
+
 
 
     type readData (filePath: string)=
