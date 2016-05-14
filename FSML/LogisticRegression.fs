@@ -3,44 +3,47 @@ module LogisticRegression
     open DataTypes
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
+    open MathNet.Numerics.Statistics
+
+    let AUC (y:Vector<double>) (score:Vector<double>)=
+        let n1= y.Sum()
+        let n0= (double) y.Count-n1
+        let sortedScore = Array.zip (score.ToArray()) (y.Negate().ToArray()) |> Array.sortBy (fun e-> e|> snd) |> Array.map fst
+        let rank= (sortedScore |> DenseVector.ofArray) .Ranks RankDefinition.Average
+        ((rank.[0..(int)n1-1] |> Array.sum )- n1* (n1+1.0)/2.0)/n0/n1
+
 
     type LR (x:Matrix<double>,y:Vector<double>)=
        
-        member val EPS=1e-6 with get,set
+        let eps=1e-6
 
-        member this.Predict (x:VectorOrMatrix) = match x with
-                | V v -> let v1= Vector<double>.One v.Count+1 
-                         [this.PredictSingle this.Beta v. ] |> DenseVector.ofSeq 
-                | M m ->  this.PredictMultiple this.Beta (m.InsertColumn(0, (seq{for i in [1..m.RowCount] -> 1.0} |> DenseVector.ofSeq)))
+        member this.Predict (x:Vector<double>) =
+            let x1= DenseVector.create (x.Count+1) 1.0
+            do (x1.SetSubVector(1,x.Count,x))
+            [this.PredictWith1 (this.Beta,x1) ] |> DenseVector.ofSeq 
 
-        member private this.XWith1= x.InsertColumn(0, (seq{for i in [1..y.Count] -> 1.0} |> DenseVector.ofSeq))
+        member this.Predict (x:Matrix<double>) =
+            this.PredictWith1 (this.Beta, x.InsertColumn(0, DenseVector.create x.RowCount 1.0))
 
-        member private this.PredictWith1 (beta:Vector<double>) (xWith1:VectorOrMatrix) = match xWith1 with
-                | V v ->  [this.PredictSingle beta v] |> DenseVector.ofSeq 
-                | M m ->  this.PredictMultiple beta m
+        member private this.XWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
         
-        member private this.PredictSingle (beta:Vector<double>) (xWith1:Vector<double>)=xWith1 * beta 
+        member private this.PredictWith1 (beta:Vector<double>, xWith1:Vector<double>)=xWith1 * beta 
 
-        member private this.PredictMultiple (beta:Vector<double>) (xWith1:Matrix<double>)=xWith1 * beta
+        member private this.PredictWith1 (beta:Vector<double>, xWith1:Matrix<double>)=xWith1 * beta
 
-        member val Beta =seq{for i in [1..x.ColumnCount+1] -> 0.0} |> DenseVector.ofSeq with get,set
+        member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
 
         member private this.Update beta  =
-
-            let o = seq{for i in [1..y.Count] -> 1.0} |> DenseVector.ofSeq
-            let pScore=this.PredictMultiple beta this.XWith1
-            let p = o./(o+ (-1. *pScore).PointwiseExp())
-            let loglikNew=this.Loglikelihood p y
-            
-            let w= DiagonalMatrix.ofDiag (p .* (o - p))
+            let pScore=this.PredictWith1 (beta, this.XWith1)
+            let p = pScore.Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
+            let loglikNew=this.Loglikelihood p y          
+            let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
             let z= this.XWith1 * beta + w.Inverse() *  (y-p)
             let betaNew= (this.XWith1.Transpose() * w *this.XWith1).Inverse() * this.XWith1.Transpose() * w*z          
             betaNew
 
         member this.Loglikelihood (p:Vector<double>) (y:Vector<double>)=
-            let o = seq{for i in [1..p.Count] -> 1.0} |> DenseVector.ofSeq
-            y*p.PointwiseLog() + (o-y)*(o-p).PointwiseLog()
+            y*p.PointwiseLog() + (y.Negate().Add(1.0))*p.Negate().Add(1.0).PointwiseLog()
 
         member this.Fit k= for i in [1..k] do  this.Beta <- (this.Update this.Beta)
-                            
- 
+          
