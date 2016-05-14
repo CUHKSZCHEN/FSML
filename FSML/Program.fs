@@ -5,19 +5,21 @@ open LogisticRegression
 [<EntryPoint>]
 let main argv = 
 
-    let dat= new readData @"c://R//diabetes1.txt"
-    let seed=1
-    let folds=3
+    let dat= new readData @"c://R//diabetes.txt"
+    let seed=1 // random seed
+    let folds=3 // use 3-folds cross-validation
     let datFold = new data (dat.CreateFold folds seed ,dat.Features)
-    let fold=1
+    let fold=1 // use fold 1 for test
     let xTrain,yTrain= datFold.Train fold
     let xTest,yTest= datFold.Test fold
     let lr= new LR (xTrain, yTrain)
     let iter=100
-    do (lr.Fit iter)
-
-    //lr.p
-    //let p= lrfit.p
-    0 // return an integer exit code
+    do lr.Fit iter
+    let pTrain = lr.Predict xTrain
+    let pTest = lr.Predict xTest
+    let aucTrain=AUC yTrain pTrain
+    let aucTest=AUC yTest pTest
+    printfn "train auc: %A" aucTrain
+    printfn "test  auc: %A" aucTest
 
 
