@@ -8,6 +8,10 @@ module DataTypes
 
     let raiseExcetion (x:string) = raise (System.Exception x)
 
+    type VectorOrMatrix =
+        | V of Vector<double>
+        | M of Matrix<double>
+
     type Variable = 
         | Y of double
         | X of int*double  
@@ -37,7 +41,7 @@ module DataTypes
             let y = xy |> Seq.map fst |> DenseVector.ofSeq  
             let columnSeq = x |> Map.toSeq |> Seq.map snd 
             let xMatrix = DenseMatrix.ofColumnSeq columnSeq         
-            xMatrix
+            xMatrix,y
         
         member this.Test (fold:int)=
             let xy=this.GetTest fold
