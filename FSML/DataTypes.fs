@@ -100,5 +100,7 @@ module DataTypes
             Seq.length this.Rows
 
         member this.CreateFold k seed  =
-            let rnd = System.Random(seed)
-            this.Rows |> Seq.groupBy (fun _ -> rnd.Next() % k) |> Map.ofSeq
+            if k>=this.N then raiseExcetion "too many folds"
+            else
+                let rnd = System.Random(seed)
+                this.Rows |> Seq.groupBy (fun _ -> rnd.Next() % k) |> Map.ofSeq
