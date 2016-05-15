@@ -14,7 +14,17 @@ module LogisticRegression
 
     let Loglik (p:Vector<double>) (y:Vector<double>)=
             y*p.PointwiseLog() + (y.Negate().Add(1.0))*p.Negate().Add(1.0).PointwiseLog()
+        
+    let getNormalizeParameter (x:Matrix<double>) =
+        x.ColumnSums().Divide(double x.RowCount),x.ToColumnArrays() |> Array.map (fun col -> col.StandardDeviation() ) |> DenseVector.ofArray
+
+    let normalize (x:VectorOrMatrix,mu:Vector<double>,sd:Vector<double>) =
+        match x with
+        | V v -> (v.Add(mu.Negate())./sd).ToRowMatrix()
+        | M m -> m.ToRowArrays() |> Array.map (fun row -> ((row |> DenseVector.ofArray).Add(mu.Negate())./(sd)).ToArray() ) |> DenseMatrix.ofRowArrays
     
+    let predictWith1 (beta, xWith1:Matrix<double>)= xWith1 * beta
+
     let rec update f (parameter:Vector<double>) (eps:double) (iter:int) (maxIter:int) =
         if iter > maxIter then parameter
         else
@@ -26,34 +36,29 @@ module LogisticRegression
     type LR (x:Matrix<double>,y:Vector<double>)=
        
         let xWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
+
+        member this.Predict (x:Vector<double>) = 
+            predictWith1 (this.Beta, (x.ToRowMatrix().InsertColumn(0, DenseVector.create x.Count 1.0)))
+        
+        member this.Predict (x:Matrix<double>) =
+            predictWith1 (this.Beta, (x.InsertColumn(0, DenseVector.create x.RowCount 1.0)))
+
         member val eps = 1e-6 with get,set
         member val maxIter = 100 with get,set
-
-        member this.Predict (x:Vector<double>) =
-            let x1= DenseVector.create (x.Count+1) 1.0
-            do (x1.SetSubVector(1,x.Count,x))
-            [this.PredictWith1 (this.Beta,x1) ] |> DenseVector.ofSeq 
-
-        member this.Predict (x:Matrix<double>) =
-            this.PredictWith1 (this.Beta, x.InsertColumn(0, DenseVector.create x.RowCount 1.0))
    
-        member private this.PredictWith1 (beta:Vector<double>, xWith1:Vector<double>)=xWith1 * beta 
-
-        member private this.PredictWith1 (beta:Vector<double>, xWith1:Matrix<double>)=xWith1 * beta
-
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
 
         member this.Update (beta:Vector<double>)  =
-            let p = (this.PredictWith1 (beta, xWith1) ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
+            let p = (predictWith1 (beta, xWith1) ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
             let loglik= Loglik p y
             do loglik |> printfn "Loglikelihood: %A"          
             let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
             let z= xWith1 * beta + w.Inverse() *  (y-p)
             (xWith1.Transpose() * w *xWith1).Inverse() * xWith1.Transpose() * w*z,loglik
 
-        member this.Fit = this.Beta <- (update this.Update this.Beta this.eps 0 this.maxIter)
-//https://core.ac.uk/download/files/153/6287975.pdf
-
+        member this.Fit = this.Beta <- (update reWeightedUpdate this.Beta xWith1 y this.eps 0 this.maxIter)
+    
+    //https://core.ac.uk/download/files/153/6287975.pdf
    type LASSO (x:Matrix<double>,y:Vector<double>,lambda)=
         let n= y.Count
         let Lambda=lambda 
