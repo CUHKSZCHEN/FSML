@@ -25,13 +25,21 @@ module LogisticRegression
     
     let predictWith1 (beta, xWith1:Matrix<double>)= xWith1 * beta
 
-    let rec update f (parameter:Vector<double>) (eps:double) (iter:int) (maxIter:int) =
+    let reWeightedUpdate (beta:Vector<double>)  (xWith1:Matrix<double>) (y:Vector<double>) =
+            let p = (predictWith1 (beta, xWith1) ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
+            let loglik= Loglik p y
+            do loglik |> printfn "Loglikelihood: %A"          
+            let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
+            let z= xWith1 * beta + w.Inverse() *  (y-p)
+            (xWith1.Transpose() * w *xWith1).Inverse() * xWith1.Transpose() * w*z,loglik
+
+    let rec update f (parameter:Vector<double>) (x:Matrix<double>) (y:Vector<double>) (eps:double) (iter:int) (maxIter:int) =
         if iter > maxIter then parameter
         else
-            let param0,loss0 = f parameter
-            let param1,loss1 = f param0
+            let param0,loss0 = f parameter x y
+            let param1,loss1 = f param0 x y
             if loss1-loss0 <  eps then parameter
-            else update f param1 eps (iter+1) maxIter
+            else update f param1 x y eps (iter+1) maxIter
 
     type LR (x:Matrix<double>,y:Vector<double>)=
        
