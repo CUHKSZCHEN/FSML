@@ -56,3 +56,4 @@ module LogisticRegression
             (xWith1.Transpose() * w *xWith1).Inverse() * xWith1.Transpose() * w*z,loglik
 
         member this.Fit = this.Beta <- (update this.Update this.Beta this.eps 0 this.maxIter)
+//https://core.ac.uk/download/files/153/6287975.pdf
