@@ -15,10 +15,6 @@ module LogisticRegression
     let Loglik (p:Vector<double>) (y:Vector<double>)=
             y*p.PointwiseLog() + (y.Negate().Add(1.0))*p.Negate().Add(1.0).PointwiseLog()
     
-    let SoftThresholdingOperator (b:double, lambda:double) = 
-        if b >0.0 then b-lambda else
-            if b<0.0 then b+lambda else 0.0 
-    
     let rec update f (parameter:Vector<double>) (eps:double) (iter:int) (maxIter:int) =
         if iter > maxIter then parameter
         else
@@ -57,3 +53,40 @@ module LogisticRegression
 
         member this.Fit = this.Beta <- (update this.Update this.Beta this.eps 0 this.maxIter)
 //https://core.ac.uk/download/files/153/6287975.pdf
+
+   type LASSO (x:Matrix<double>,y:Vector<double>,lambda)=
+        let n= y.Count
+        let Lambda=lambda 
+        let EPS = 1e-5
+        let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
+        let mu,sigma = x|> getNormalizeParameter
+        let normalizedX=normalize ((M x), mu , sigma)
+        let normalizedXWith1=normalizedX.InsertColumn(0, DenseVector.create x.RowCount 1.0)
+
+        let coordinateDescent (betaNew:Vector<double>) (co:int)=
+            let s=predictWith1 (betaNew, normalizedXWith1)
+            let p=(s ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
+            let w=p .* p.Negate().Add(1.0)
+            let pNew = p.Map (fun e -> if abs(e)<EPS then 0.0 else if abs(e)+EPS>1.0 then 1.0 else e)
+            let wNew = Vector.map2 (fun e k -> if abs(e)<EPS then EPS else if abs(e)+EPS>1.0 then EPS else k) p w
+            let zNew= normalizedXWith1 * betaNew + (DiagonalMatrix.ofDiag wNew).Inverse() *  (y-pNew)
+            let denominator=wNew*(normalizedXWith1.Column(co).PointwisePower(2.0))
+            let a = ((zNew - s + normalizedXWith1.Column(co).Multiply(betaNew.At(co)) ).*wNew.*normalizedXWith1.Column(co)).Sum()
+            let b = double n*Lambda
+            if a>b then a-b/denominator else 
+                if a + b < 0.0 then a+b/denominator else 0.0
+
+
+        member val eps = 1e-6 with get,set
+        member val maxIter = 100 with get,set
+   
+        member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
+        member this.CyclicCoordinateDescentUpdate (beta:Vector<double>)=
+            let betaNew,loglik = reWeightedUpdate beta normalizedXWith1 y
+            for i in [1..beta.Count-1] do 
+                betaNew.Item(i) <- (coordinateDescent betaNew i)
+            betaNew
+        
+        member this.Fit (k:int) = for i in [1..k] do 
+                                    this.Beta <- (this.CyclicCoordinateDescentUpdate this.Beta)
+
