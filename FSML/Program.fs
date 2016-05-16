@@ -10,6 +10,7 @@ let main argv =
     let fold=1 // use fold 1 for test
     let xTrain,yTrain= datFold.Train fold
     let xTest,yTest= datFold.Test fold
+    printfn "%A" "logistic regression:"
     let lr= new LR (xTrain, yTrain)
     let iter=100
     do lr.Fit
@@ -17,6 +18,7 @@ let main argv =
     let pTest = lr.Predict xTest
     let aucTrain=AUC yTrain pTrain
     let aucTest=AUC yTest pTest
+
     printfn "train auc: %A" aucTrain
     printfn "test  auc: %A" aucTest
 
@@ -26,6 +28,7 @@ let main argv =
     let pTest = lasso.Predict xTest
     let aucTrain=AUC yTrain pTrain
     let aucTest=AUC yTest pTest
+    printfn "%A" "lasso regression:"
     printfn "train auc: %A" aucTrain
     printfn "test  auc: %A" aucTest
 
@@ -35,6 +38,7 @@ let main argv =
     let pTest = ridge.Predict xTest
     let aucTrain=AUC yTrain pTrain
     let aucTest=AUC yTest pTest
+    printfn "%A" "ridge regression:"
     printfn "train auc: %A" aucTrain
     printfn "test  auc: %A" aucTest
     0
