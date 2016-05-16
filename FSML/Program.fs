@@ -20,7 +20,7 @@ let main argv =
     printfn "train auc: %A" aucTrain
     printfn "test  auc: %A" aucTest
 
-    let lasso = new LASSO (xTrain, yTrain,0.0001)
+    let lasso = new LASSO (xTrain, yTrain,0.1)
     do lasso.Fit
     let pTrain = lasso.Predict xTrain
     let pTest = lasso.Predict xTest
@@ -29,10 +29,10 @@ let main argv =
     printfn "train auc: %A" aucTrain
     printfn "test  auc: %A" aucTest
 
-    let lasso = new RIDGE (xTrain, yTrain,0.0001)
-    do lasso.Fit
-    let pTrain = lasso.Predict xTrain
-    let pTest = lasso.Predict xTest
+    let ridge = new RIDGE (xTrain, yTrain,0.1)
+    do ridge.Fit
+    let pTrain = ridge.Predict xTrain
+    let pTest = ridge.Predict xTest
     let aucTrain=AUC yTrain pTrain
     let aucTest=AUC yTest pTest
     printfn "train auc: %A" aucTrain
