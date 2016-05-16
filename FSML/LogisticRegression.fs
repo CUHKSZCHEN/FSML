@@ -141,7 +141,7 @@ module LogisticRegression
             let s= predictWith1 (beta, normalizedXWith1)
             let p = (s ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
             let loglik= Loglik s y
-            let loss = -loglik/(double n)/2.0 + (pown (beta.Norm(2.0)) 2)*Lambda-abs(beta.At(0))*Lambda
+            let loss = -loglik/(double n)/2.0 + (pown (beta.Norm(2.0)) 2)*Lambda-(pown (beta.At(0)) 2)*Lambda
             do printfn "Loglikelihood: %A\t loss: %A" loglik loss   
             let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
             let z= normalizedXWith1 * beta + w.Inverse() *  (y-p)
