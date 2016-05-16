@@ -144,12 +144,16 @@ module LogisticRegression
             do printfn "Loglikelihood: %A\t loss: %A" loglik loss   
             let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
             match algorithm with
-            | "exact" ->        
+            | "cd" ->        
                 let z= normalizedXWith1 * beta + w.Inverse() *  (y-p)
                 (normalizedXWith1.Transpose() * w *normalizedXWith1).Inverse() * normalizedXWith1.Transpose() * w*z,loss
-            | "cd" ->
-                let h = -(normalizedXWith1.Transpose() * w *normalizedXWith1).Divide(double n) - (DiagonalMatrix.ofDiag (DenseVector.create beta.Count Lambda))
-                let g= normalizedXWith1.Transpose()*(y-p).Divide(double n) - beta.Multiply(Lambda)
+            | "exact" ->
+                let m = DenseVector.create beta.Count Lambda
+                m.Item(0) <- 0.0
+                let h = -(normalizedXWith1.Transpose() * w *normalizedXWith1).Divide(double n) - (DiagonalMatrix.ofDiag (m))
+                let k =Lambda*beta
+                k.Item(0) <- 0.0
+                let g= normalizedXWith1.Transpose()*(y-p).Divide(double n) - k
                 beta - h.Inverse()*g, loss
             | _ -> raiseExcetion "please choose either \"cd\" or \"exact\" algorithm"
 
@@ -171,16 +175,16 @@ module LogisticRegression
                 betaNew.Item(i) <- (coordinateDescent betaNew i)
             betaNew,loss
         
-        new (x,y,lambda) = RIDGE(x,y,lambda,"cd")
+        new (x,y,lambda) = RIDGE(x,y,lambda,"exact")
         member val eps = 1e-6 with get,set
         member val maxIter = 100 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         
         member this.Fit = match algorithm with
-            | "exact" ->
+            | "cd" ->
                 this.Beta <- (update cyclicCoordinateDescentUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
-            | "cd" -> this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
+            | "exact" -> this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
             | _ -> raiseExcetion "please choose either \"cd\" or \"exact\" algorithm"
 
         member this.Predict (x:Vector<double>) = 
