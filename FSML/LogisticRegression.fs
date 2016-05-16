@@ -176,3 +176,45 @@ module LogisticRegression
         
         member this.Predict (x:Matrix<double>) =
             predictWith1 (this.Beta, ((normalize ((M x), mu , sigma)).InsertColumn(0, DenseVector.create x.RowCount 1.0)))
+
+    type RIDGEExact (x:Matrix<double>,y:Vector<double>,lambda)=
+        let n= y.Count
+        let Lambda=lambda 
+        let EPS = 1e-6
+        let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
+        let mu,sigma = x|> getNormalizeParameter
+        let normalizedX=normalize ((M x), mu , sigma)
+        let normalizedXWith1=normalizedX.InsertColumn(0, DenseVector.create x.RowCount 1.0)
+
+        let reWeightedUpdate (beta:Vector<double>) =
+            let s=predictWith1 (beta, normalizedXWith1)
+            let p = (s ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
+            let loglik = Loglik s y
+            let loss = -loglik/(double n)/2.0 + (pown ((beta.[1..]).Norm(2.0)) 2)*Lambda/2.0
+            do printfn "Loglikelihood: %A\t loss: %A" loglik loss            
+            let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
+            let z= normalizedXWith1 * beta + w.Inverse() *  (y-p)
+            (normalizedXWith1.Transpose() * w *normalizedXWith1).Inverse() * ((normalizedXWith1.Transpose() * w*z).Add(DenseVector.create beta.Count -lambda* (double 1))),-loglik
+
+        member this.Predict (x:Vector<double>) = 
+            predictWith1 (this.Beta, ((normalize ((V x), mu, sigma)).InsertColumn(0, DenseVector.create x.Count 1.0)))
+        
+        member this.Predict (x:Matrix<double>) =
+            predictWith1 (this.Beta, ((normalize ((M x), mu , sigma)).InsertColumn(0, DenseVector.create x.RowCount 1.0)))
+    
+        member val eps = 1e-6 with get,set
+        member val maxIter = 100 with get,set
+        member val minIter = 10 with get,set
+        member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
+
+        member this.Update (beta:Vector<double>)  =
+            let s = predictWith1 (beta, normalizedXWith1)
+            let p = (s).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
+            let loglik= Loglik s y
+            do loglik |> printfn "Loglikelihood: %A"          
+            let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
+            let z= normalizedXWith1 * beta + w.Inverse() *  (y-p)
+            (normalizedXWith1.Transpose() * w *normalizedXWith1).Inverse() * normalizedXWith1.Transpose() * w*z,-loglik
+
+        member this.Fit = this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
+
