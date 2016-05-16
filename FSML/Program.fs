@@ -21,7 +21,7 @@ let main argv =
 
     printfn "train auc: %A" aucTrain
     printfn "test  auc: %A" aucTest
-
+    printfn "beta: %A" (lr.Beta.ToArray())
     let lasso = new LASSO (xTrain, yTrain,0.1)
     do lasso.Fit
     let pTrain = lasso.Predict xTrain
@@ -31,6 +31,7 @@ let main argv =
     printfn "%A" "lasso regression:"
     printfn "train auc: %A" aucTrain
     printfn "test  auc: %A" aucTest
+    printfn "beta: %A" (lasso.Beta.ToArray())
 
     let ridge = new RIDGE (xTrain, yTrain,0.1)
     do ridge.Fit
@@ -41,4 +42,5 @@ let main argv =
     printfn "%A" "ridge regression:"
     printfn "train auc: %A" aucTrain
     printfn "test  auc: %A" aucTest
+    printfn "beta: %A" (ridge.Beta.ToArray())
     0
