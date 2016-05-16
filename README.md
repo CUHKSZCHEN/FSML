@@ -1,6 +1,8 @@
 # FSML
 A machine learning library written in F#!
 
+### Version
+0.1.0
 
 ### Algorithms implemented:
   - Logistic Regression without regularization by reweighted least square
