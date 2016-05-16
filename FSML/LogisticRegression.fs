@@ -41,9 +41,9 @@ module LogisticRegression
             let paramNew,lossNew = f parameter
             if lossOld - lossNew <  eps && iter >= minIter then parameter
             else update f paramNew eps (iter+1) maxIter minIter lossOld
-
+    
     type LR (x:Matrix<double>,y:Vector<double>)=
-       
+
         let xWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
 
         let reWeightedUpdate (beta:Vector<double>) =
@@ -55,12 +55,11 @@ module LogisticRegression
             let z= xWith1 * beta + w.Inverse() *  (y-p)
             (xWith1.Transpose() * w *xWith1).Inverse() * xWith1.Transpose() * w*z,-loglik
 
-
         member this.Predict (x:Vector<double>) = 
             predictWith1 (this.Beta, (x.ToRowMatrix().InsertColumn(0, DenseVector.create x.Count 1.0)))
         
         member this.Predict (x:Matrix<double>) =
-            predictWith1 (this.Beta, (x.InsertColumn(0, DenseVector.create x.RowCount 1.0)))
+                    predictWith1 (this.Beta, (x.InsertColumn(0, DenseVector.create x.RowCount 1.0)))
 
         member val eps = 1e-6 with get,set
         member val maxIter = 100 with get,set
@@ -91,7 +90,7 @@ module LogisticRegression
             let s =predictWith1 (beta, normalizedXWith1) 
             let p = (s).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
             let loglik= Loglik s y
-            let loss = -loglik/(double n)/2.0 + beta.Norm(1.0)*Lambda-abs(beta.At(0))*Lambda
+            let loss = -loglik/(double n)/2.0 + (beta.[1..].Norm(1.0))*Lambda
             do printfn "Loglikelihood: %A\t loss: %A" loglik loss   
             let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
             let z= normalizedXWith1 * beta + w.Inverse() *  (y-p)
@@ -141,7 +140,7 @@ module LogisticRegression
             let s= predictWith1 (beta, normalizedXWith1)
             let p = (s ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
             let loglik= Loglik s y
-            let loss = -loglik/(double n)/2.0 + (pown (beta.Norm(2.0)) 2)*Lambda-(pown (beta.At(0)) 2)*Lambda
+            let loss = -loglik/(double n)/2.0 + (pown ((beta.[1..]).Norm(2.0)) 2)*Lambda/2.0
             do printfn "Loglikelihood: %A\t loss: %A" loglik loss   
             let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
             let z= normalizedXWith1 * beta + w.Inverse() *  (y-p)
