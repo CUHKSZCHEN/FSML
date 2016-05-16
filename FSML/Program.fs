@@ -3,7 +3,7 @@ open LogisticRegression
 [<EntryPoint>]
 let main argv = 
     // download sample data from https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/diabetes
-    let dat= new readData @"/Users/nl/Downloads/diabetes.txt"
+    let dat= new readData @"/diabetes.txt"
     let seed=1 // random seed
     let folds=3 // use 3-folds cross-validation
     let datFold = new data (dat.CreateFold folds seed ,dat.Features)
