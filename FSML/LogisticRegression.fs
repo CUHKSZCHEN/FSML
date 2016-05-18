@@ -108,18 +108,18 @@ module LogisticRegression
 
         let coordinateDescent (betaNew:Vector<double>) (co:int)=
             let s=predictWith1 (betaNew, normalizedXWith1)
-            let p=(s ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
-            let loglik= Loglik s y
-            
-            let loss = -loglik/(double n)/2.0 + (betaNew.[1..].Map (fun e -> e*e)).Sum()*Lambda/2.0
-            do printfn "coordinate:%A\t Loglikelihood: %A\t loss: %A" co loglik loss   
+            let p=(s ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)          
             let w=p .* (p.Negate().Add(1.0))
             let pNew = p.Map (fun e -> if e<EPS then 0.0 else if e+EPS>1.0 then 1.0 else e)
             let wNew = Vector.map2 (fun e k -> if abs(e)<EPS then EPS else if abs(e)+EPS>1.0 then EPS else k) p w
-            let zNew= normalizedXWith1 * betaNew + (DiagonalMatrix.ofDiag wNew).Inverse() *  (y-pNew)
-            let denominator = wNew*(normalizedXWith1.Column(co).PointwisePower(2.0)) + (double n*Lambda)
-            let numerator = ((zNew - s + normalizedXWith1.Column(co).Multiply(betaNew.At(co)) ).* wNew .* normalizedXWith1.Column(co)).Sum()
-            numerator/denominator
+            let zNew= s + (y-pNew)./wNew
+   
+            if co = 0 then
+                betaNew.Item(0)+wNew*(y-pNew)/(double (n*n))
+            else
+                let a = -wNew*(normalizedXWith1.Column(co).*normalizedXWith1.Column(co))/(double n)- Lambda
+                let b = ((normalizedXWith1.Column(co))*((y-pNew))/(double n))- Lambda*betaNew.At(co)   
+                betaNew.Item(co) - a*b
         
                         
         let cyclicCoordinateDescentUpdate (beta:Vector<double>)=
@@ -131,13 +131,14 @@ module LogisticRegression
             let pNew = p.Map (fun e -> if e<EPS then 0.0 else if e+EPS>1.0 then 1.0 else e)
             let wNew = Vector.map2 (fun e k -> if abs(e)<EPS then EPS else if abs(e)+EPS>1.0 then EPS else k) p w
             let zNew= normalizedXWith1 * beta + (DiagonalMatrix.ofDiag wNew).Inverse() *  (y-pNew)
-            let loss = -(wNew.*(zNew-s).*(zNew-s)).Sum()/(double n)/2.0 +  (beta.[1..].Map (fun e -> e*e)).Sum()*Lambda/2.0
-            do printfn "Loglikelihood: %A\t loss: %A" (Loglik s y)  loss
+            let approLik= -(((y-pNew))*((y-pNew)./w))/(double n)/2.0  
+            let loss =approLik + (beta.[1..].Map (fun e -> e*e)).Sum()*Lambda/2.0
+            do printfn "Real Loglikelihood: %A \t Approx scaled Loglikelihood: %A\t loss: %A" (Loglik s y) approLik  loss
             beta,loss
         
         new (x,y,lambda) = RIDGE(x,y,lambda,"exact")
         member val eps = 1e-16 with get,set
-        member val maxIter = 100 with get,set
+        member val maxIter = 10000 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         
@@ -198,7 +199,7 @@ module LogisticRegression
             beta,loss
         
         member val eps = 1e-16 with get,set
-        member val maxIter = 100 with get,set
+        member val maxIter = 100000 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         
