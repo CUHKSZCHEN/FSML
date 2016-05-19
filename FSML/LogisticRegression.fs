@@ -166,25 +166,24 @@ module LogisticRegression
         let normalizedXWith1=normalizedX.InsertColumn(0, DenseVector.create x.RowCount 1.0)
 
         let coordinateDescent (betaNew:Vector<double>) (co:int)=
+
             let s=predictWith1 (betaNew, normalizedXWith1)
             let p=(s ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)          
             let w=p .* (p.Negate().Add(1.0))
             let pNew = p.Map (fun e -> if e<EPS then 0.0 else if e+EPS>1.0 then 1.0 else e)
             let wNew = Vector.map2 (fun e k -> if abs(e)<EPS then EPS else if abs(e)+EPS>1.0 then EPS else k) p w
-            let zNew= s + (y-pNew)./wNew
-   
             if co = 0 then
-                betaNew.Item(0)+wNew*(y-pNew)/(double (n*n))
+                let g= -wNew*((y-pNew)./wNew)/(double n)
+                let h= wNew.Sum()/(double n)
+                betaNew.Item(0)-g/h
             else
-                let a = -wNew*(normalizedXWith1.Column(co).*normalizedXWith1.Column(co))/(double n)
-                let b = (normalizedXWith1.Column(co))*((y-pNew))/(double n)
-                let d=a*(b-Lambda)       
-                if betaNew.Item(co) > d then betaNew.Item(co) - d
-                else
-                    let e= a*(b+Lambda)
-                    if betaNew.Item(co) < e then betaNew.Item(co) - e else 0.0
-                     
-        let cyclicCoordinateDescentUpdate (beta:Vector<double>)=       
+                let g1 = -(normalizedXWith1.Column(co).*((y-pNew)./wNew).*wNew).Sum()/(double n) + Lambda
+                let h = wNew*(normalizedXWith1.Column(co).*normalizedXWith1.Column(co))/(double n)
+                if betaNew.Item(co) - g1/h> 0.0 then betaNew.Item(co) - g1/h else
+                    let g2 = g1 - 2.0 * Lambda
+                    if betaNew.Item(co) - g2/h< 0.0 then betaNew.Item(co) - g2/h else 0.0
+   
+        let cyclicCoordinateDescentUpdate (beta:Vector<double>)=
             for i in [0..beta.Count-1] do 
                 beta.Item(i) <- (coordinateDescent beta i)
             let s=predictWith1 (beta, normalizedXWith1)
@@ -192,12 +191,12 @@ module LogisticRegression
             let w=p .* (p.Negate().Add(1.0))
             let pNew = p.Map (fun e -> if e<EPS then 0.0 else if e+EPS>1.0 then 1.0 else e)
             let wNew = Vector.map2 (fun e k -> if abs(e)<EPS then EPS else if abs(e)+EPS>1.0 then EPS else k) p w
-            let zNew= s + (y-pNew)./w
+            let zNew= normalizedXWith1 * beta + (DiagonalMatrix.ofDiag wNew).Inverse() *  (y-pNew)
             let approLik= -(((y-pNew))*((y-pNew)./w))/(double n)/2.0  
-            let loss =approLik + (beta.[1..].Norm(1.0))*Lambda
-            do printfn "Real Loglikelihood: %A \t Approx scaled Loglikelihood: %A\t loss: %A" (Loglik s y) approLik  loss
-            beta,loss
-        
+            let loss =approLik + (beta.[1..].Map (fun e -> abs(e))).Sum()*Lambda
+            do printfn "Real Loglikelihood: %A \t Approx scaled Loglikelihood: %A \t loss: %A" (Loglik s y) approLik  loss
+            beta,-loss
+
         member val eps = 1e-16 with get,set
         member val maxIter = 100000 with get,set
         member val minIter = 10 with get,set
