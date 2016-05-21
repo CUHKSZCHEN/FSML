@@ -31,10 +31,10 @@ module SVM
         member val b=0.0 with get,set
 
         member this.Predict (x:Vector<double>) = 
-            ((normalizedX*(normalize ((V x), mu, sigma))).Transpose()*(Y.*this.Alpha)+this.b).Map (fun e-> if e>0.0 then 1.0 else -1.0)
+            ((normalizedX*(normalize ((V x), mu, sigma)).Transpose()).Transpose()*(Y.*this.Alpha)+this.b).Map (fun e-> if e>0.0 then 1.0 else -1.0)
         
         member this.Predict (x:Matrix<double>) =
-            ((normalizedX*(normalize ((M x), mu, sigma))).Transpose()*(Y.*this.Alpha)+this.b).Map (fun e-> if e>0.0 then 1.0 else -1.0)
+            ((normalizedX*(normalize ((M x), mu, sigma)).Transpose()).Transpose()*(Y.*this.Alpha)+this.b).Map (fun e-> if e>0.0 then 1.0 else -1.0)
 
         member private this.E (i:int)= this.f i - Y.[i]
 
@@ -48,7 +48,7 @@ module SVM
             for i in [0..n-1] do
                 if this.checkCondition i then
                     pass<- pass + ( this.updateSingle i)
-            if pass = 0 then iter+1 else iter
+            if pass = 0 then iter+1 else 0
         
         member private this.updateSingle (i:int)=
 
