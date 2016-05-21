@@ -1,39 +1,12 @@
 module LogisticRegression
     
     open DataTypes
+    open Utilities
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
-    open MathNet.Numerics.Statistics
-
-    let AUC (y:Vector<double>) (score:Vector<double>)=
-        let n1= y.Sum()
-        let n0= (double) y.Count-n1
-        let sortedScore = Array.zip (score.ToArray()) (y.Negate().ToArray()) |> Array.sortBy (fun e-> e|> snd) |> Array.map fst
-        let rank= (sortedScore |> DenseVector.ofArray) .Ranks RankDefinition.Average
-        ((rank.[0..(int)n1-1] |> Array.sum )- n1* (n1+1.0)/2.0)/n0/n1
-
-    let Loglik (s:Vector<double>) (y:Vector<double>)=
-        y*s - s.PointwiseExp().Add(1.0).PointwiseLog().Sum()
-
-    let logloss (p:Vector<double>) (y:Vector<double>)=
-        let EPSLow=1e-15
-        let EPSHigh=1.0-EPSLow 
-        let pNew=p.Map (fun e -> if e<EPSLow then EPSLow else if e>EPSHigh then EPSHigh else e)
-        -(y*pNew.PointwiseLog() + (y.Negate().Add(1.0))*pNew.Negate().Add(1.0).PointwiseLog()) /(double p.Count)
-
-    let SoftThresholdingOperator (b:double, lambda:double) = 
-        if b >0.0 then b-lambda else
-            if b<0.0 then b+lambda else 0.0 
     
-    let getNormalizeParameter (x:Matrix<double>) =
-        x.ColumnSums().Divide(double x.RowCount),x.ToColumnArrays() |> Array.map (fun col -> col.StandardDeviation() ) |> DenseVector.ofArray
 
-    let normalize (x:VectorOrMatrix,mu:Vector<double>,sd:Vector<double>) =
-        match x with
-        | V v -> (v.Add(mu.Negate())./sd).ToRowMatrix()
-        | M m -> m.ToRowArrays() |> Array.map (fun row -> ((row |> DenseVector.ofArray).Add(mu.Negate())./(sd)).ToArray() ) |> DenseMatrix.ofRowArrays
-    
-    let predictWith1 (beta, xWith1:Matrix<double>)= xWith1 * beta
+    //let predictWith1 (beta, xWith1:Matrix<double>)= xWith1 * beta
 
     let rec update f (parameter:Vector<double>) (eps:double) (iter:int) (maxIter:int) (minIter:int) (lossOld:double) =
         if iter >= maxIter then parameter
