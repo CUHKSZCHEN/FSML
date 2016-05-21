@@ -13,7 +13,7 @@ let main argv =
     printfn "%A" "logistic regression:"
     let lr= new LR (xTrain, yTrain)
     let iter=100
-    do lr.Fit
+    do lr.Fit()
     let pTrain = lr.Predict xTrain
     let pTest = lr.Predict xTest
     let aucTrain=AUC yTrain pTrain
@@ -24,7 +24,7 @@ let main argv =
     printfn "beta: %A" (lr.Beta.ToArray())
 
     let lasso = new LASSO (xTrain, yTrain,0.1)
-    do lasso.Fit
+    do lasso.Fit()
     let pTrain = lasso.Predict xTrain
     let pTest = lasso.Predict xTest
     let aucTrain=AUC yTrain pTrain
@@ -37,7 +37,7 @@ let main argv =
 
 
     let ridge = new RIDGE (xTrain, yTrain,0.1)
-    do ridge.Fit
+    do ridge.Fit()
     let pTrain = ridge.Predict xTrain
     let pTest = ridge.Predict xTest
     let aucTrain=AUC yTrain pTrain
@@ -49,7 +49,7 @@ let main argv =
 
 
     let ridge1= new RIDGE (xTrain, yTrain,0.1,"cd")
-    do ridge1.Fit
+    do ridge1.Fit()
     let pTrain = ridge1.Predict xTrain
     let pTest = ridge1.Predict xTest
     let aucTrain=AUC yTrain pTrain
