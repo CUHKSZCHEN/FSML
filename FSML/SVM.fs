@@ -38,47 +38,59 @@ module SVM
 
         member private this.E (i:int)= this.f i - Y.[i]
 
-        member private this.checkCondition (i:int)=
-            let z=Y.[i]*(this.E i) 
-            if (Y.[i]*(this.E i) < -tol && this.Alpha.[i]<C) || (Y.[i]*(this.E i) > tol && this.Alpha.[i]>0.0) then true else false
+        member private this.checkCondition (i:int,Ei:double)=
+            if (Ei < -tol && this.Alpha.[i]<C) || (Ei > tol && this.Alpha.[i]>0.0) then true else false
         
         member private this.update (iter:int)=
             printfn "%A" iter
             let mutable pass=0
             for i in [0..n-1] do
-                if this.checkCondition i then
-                    pass<- pass + ( this.updateSingle i)
+                pass<- pass + ( this.updateSingle i)
             if pass = 0 then iter+1 else 0
         
-        member private this.updateSingle (i:int)=
+        member private this.updateAlphaI (i:int,j:int,alphaOldI,alphaOldJ,alphaJ,Ei,Ej)=
+            let mutable alphaI = alphaOldI + Y.[i]*Y.[j]*(alphaOldJ-alphaJ)
+            let b1 = this.b - Ei - Y.[i]*(alphaI-alphaOldI)*(normalizedX.Row(i)*normalizedX.Row(i)) -  Y.[j]*(alphaJ-alphaOldJ)*(normalizedX.Row(i)*normalizedX.Row(j))    
+            let b2 = this.b - Ej - Y.[i]*(alphaI-alphaOldI)*(normalizedX.Row(i)*normalizedX.Row(j)) -  Y.[j]*(alphaJ-alphaOldJ)*(normalizedX.Row(j)*normalizedX.Row(j))
+            this.Alpha.[i] <- alphaI
+            this.Alpha.[j] <- alphaJ
+            this.b <- (b1+b2)/2.0
 
-            let mutable j = rnd.Next() % (n-1)
-            if j >=i then j <- j+1 
-            let Ej= this.E j
-            let alphaOldI,alphaOldJ = (this.Alpha.[i],this.Alpha.[j])
-            let L,H= this.LH (i,j,alphaOldI,alphaOldJ)
-            if abs (L-H) < EPS then
-                0
-            else
-                let eta = this.eta (i,j)
-                if eta>=0.0 then
+        member private this.updateSingle (i:int)=
+            let Ei= this.E i
+            if this.checkCondition (i,Ei) then
+                let mutable j = rnd.Next() % (n-1)
+                if j >=i then j <- j+1 
+                let Ej= this.E j
+                let alphaOldI,alphaOldJ = (this.Alpha.[i],this.Alpha.[j])
+                let L,H= this.LH (i,j,alphaOldI,alphaOldJ)
+                if L=H then
                     0
                 else
-                    let Ei= this.E i
-                    let mutable alphaJ = (alphaOldJ-Y.[j]*(Ei - Ej)/eta)
-                    if alphaJ > H then alphaJ <- H else if alphaJ<L then alphaJ<-L
-                    if abs (alphaJ-alphaOldJ) < EPS then
-                        0
+                    let eta = this.eta (i,j)
+                    if eta=0.0 then
+                        let Lobj=eta/2.0*L*L+(Y.[j]*(Ei-Ej)-eta*alphaOldJ)*L
+                        let Hobj=eta/2.0*H*H+(Y.[j]*(Ei-Ej)-eta*alphaOldJ)*H
+                        if Lobj> (Hobj+EPS) then
+                            this.Alpha.[j] <- L
+                            this.updateAlphaI (i,j,alphaOldI,alphaOldJ,L,Ei,Ej)
+                            1
+                        else 
+                            if Lobj< (Hobj-EPS) then 
+                                this.Alpha.[j] <- H 
+                                this.updateAlphaI (i,j,alphaOldI,alphaOldJ,H,Ei,Ej)
+                                1
+                            else 0
                     else
-                        let mutable alphaI = alphaOldI + Y.[i]*Y.[j]*(alphaOldJ-alphaJ)
-                        let b1 = this.b - Ei - Y.[i]*(alphaI-alphaOldI)*normalizedX.Row(i)*normalizedX.Row(i) -  Y.[j]*(alphaJ-alphaOldJ)*normalizedX.Row(i)*normalizedX.Row(j)
-                        let mutable b = b1
-                        let b2 = this.b - Ej - Y.[i]*(alphaI-alphaOldI)*normalizedX.Row(i)*normalizedX.Row(j) -  Y.[j]*(alphaJ-alphaOldJ)*normalizedX.Row(j)*normalizedX.Row(j)
-                        if alphaI>0.0 && alphaI<C then b <- b1 else if  alphaJ>0.0 && alphaJ<C then b<- b2 else b <- (b1+b2)/2.0
-                        this.b<-b
-                        this.Alpha.[i] <- alphaI
-                        this.Alpha.[j] <- alphaJ
-                        1
+                        let mutable alphaJ = (alphaOldJ-Y.[j]*(Ei - Ej)/eta)
+                        if alphaJ > H then alphaJ <- H else if alphaJ<L then alphaJ<-L
+                        if abs (alphaJ-alphaOldJ) < EPS*(alphaJ+alphaOldJ+EPS) then
+                            0
+                        else
+                            this.Alpha.[j] <- alphaJ
+                            this.updateAlphaI (i,j,alphaOldI,alphaOldJ,alphaJ,Ei,Ej)
+                            1
+            else 0
         
         member this.Fit () = 
             let mutable iter=0
