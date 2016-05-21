@@ -10,11 +10,11 @@ module SVM
         let n= y.Count
         let Y = y*2.0-1.0
         let tol = 1e-3
-        let EPS = 1e-6
+        let EPS = 1e-5
         let checkC = if C < 0.0 then raiseExcetion "C should be non-negative"
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
-        let maxPass=100
+        let maxPass=5
         let seed=1
         let rnd= System.Random(seed)
 
@@ -31,10 +31,10 @@ module SVM
         member val b=0.0 with get,set
 
         member this.Predict (x:Vector<double>) = 
-            predictWith1 (this.Alpha, (x.ToRowMatrix().InsertColumn(0, DenseVector.create x.Count 1.0)))
+            ((normalizedX*(normalize ((V x), mu, sigma))).Transpose()*(Y.*this.Alpha)+this.b).Map (fun e-> if e>0.0 then 1.0 else -1.0)
         
         member this.Predict (x:Matrix<double>) =
-            predictWith1 (this.Alpha, (x.InsertColumn(0, DenseVector.create x.RowCount 1.0)))
+            ((normalizedX*(normalize ((M x), mu, sigma))).Transpose()*(Y.*this.Alpha)+this.b).Map (fun e-> if e>0.0 then 1.0 else -1.0)
 
         member private this.E (i:int)= this.f i - Y.[i]
 
