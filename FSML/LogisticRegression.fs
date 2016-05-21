@@ -49,7 +49,7 @@ module LogisticRegression
             let z= xWith1 * beta + w.Inverse() *  (y-p)
             (xWith1.Transpose() * w *xWith1).Inverse() * xWith1.Transpose() * w*z,-loglik
 
-        member this.Fit = this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
+        member this.Fit () = this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
      type RIDGE (x:Matrix<double>,y:Vector<double>,lambda,algorithm:string)=
         let n= y.Count
@@ -115,7 +115,7 @@ module LogisticRegression
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         
-        member this.Fit = 
+        member this.Fit () = 
             match algorithm with
             | "cd" ->
                 this.Beta <- (update cyclicCoordinateDescentUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
@@ -175,7 +175,7 @@ module LogisticRegression
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         
-        member this.Fit = this.Beta <- (update cyclicCoordinateDescentUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
+        member this.Fit() = this.Beta <- (update cyclicCoordinateDescentUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
         member this.Predict (x:Vector<double>) = 
             predictWith1 (this.Beta, ((normalize ((V x), mu, sigma)).InsertColumn(0, DenseVector.create 1 1.0)))
