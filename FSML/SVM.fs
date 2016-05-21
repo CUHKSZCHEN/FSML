@@ -17,15 +17,16 @@ module SVM
         let maxPass=5
         let seed=1
         let rnd= System.Random(seed)
+        let innerProduct= normalizedX*normalizedX.Transpose()
 
-        member private this.f (i:int) = (normalizedX*normalizedX.Row(i)).* Y*this.Alpha + this.b
+        member private this.f (i:int) = (innerProduct.Column(i)).* Y*this.Alpha + this.b
 
         member private this.LH (i:int,j:int,alphaI,alphaJ) =
             if Y.[i]<>Y.[j] then  max 0.0 (alphaJ-alphaI), min C (C+alphaJ-alphaI)
             else max 0.0 (alphaJ+alphaI-C), min C (alphaI+alphaJ)
 
         member private this.eta(i:int,j:int)=
-            2.0*normalizedX.Row(i)*normalizedX.Row(j) - normalizedX.Row(i)*normalizedX.Row(i) - normalizedX.Row(j)*normalizedX.Row(j)
+            2.0*innerProduct.[i,j] - innerProduct.[i,i] - innerProduct.[j,j]
 
         member val Alpha = (DenseVector.zero (n)) with get,set
         member val b=0.0 with get,set
@@ -50,8 +51,8 @@ module SVM
         
         member private this.updateAlphaI (i:int,j:int,alphaOldI,alphaOldJ,alphaJ,Ei,Ej)=
             let mutable alphaI = alphaOldI + Y.[i]*Y.[j]*(alphaOldJ-alphaJ)
-            let b1 = this.b - Ei - Y.[i]*(alphaI-alphaOldI)*(normalizedX.Row(i)*normalizedX.Row(i)) -  Y.[j]*(alphaJ-alphaOldJ)*(normalizedX.Row(i)*normalizedX.Row(j))    
-            let b2 = this.b - Ej - Y.[i]*(alphaI-alphaOldI)*(normalizedX.Row(i)*normalizedX.Row(j)) -  Y.[j]*(alphaJ-alphaOldJ)*(normalizedX.Row(j)*normalizedX.Row(j))
+            let b1 = this.b - Ei - Y.[i]*(alphaI-alphaOldI)*(innerProduct.[i,i]) -  Y.[j]*(alphaJ-alphaOldJ)*(innerProduct.[i,j])    
+            let b2 = this.b - Ej - Y.[i]*(alphaI-alphaOldI)*(innerProduct.[i,j]) -  Y.[j]*(alphaJ-alphaOldJ)*(innerProduct.[j,j])
             this.Alpha.[i] <- alphaI
             this.Alpha.[j] <- alphaJ
             this.b <- (b1+b2)/2.0
@@ -72,12 +73,10 @@ module SVM
                         let Lobj=eta/2.0*L*L+(Y.[j]*(Ei-Ej)-eta*alphaOldJ)*L
                         let Hobj=eta/2.0*H*H+(Y.[j]*(Ei-Ej)-eta*alphaOldJ)*H
                         if Lobj> (Hobj+EPS) then
-                            this.Alpha.[j] <- L
                             this.updateAlphaI (i,j,alphaOldI,alphaOldJ,L,Ei,Ej)
                             1
                         else 
                             if Lobj< (Hobj-EPS) then 
-                                this.Alpha.[j] <- H 
                                 this.updateAlphaI (i,j,alphaOldI,alphaOldJ,H,Ei,Ej)
                                 1
                             else 0
@@ -87,7 +86,6 @@ module SVM
                         if abs (alphaJ-alphaOldJ) < EPS*(alphaJ+alphaOldJ+EPS) then
                             0
                         else
-                            this.Alpha.[j] <- alphaJ
                             this.updateAlphaI (i,j,alphaOldI,alphaOldJ,alphaJ,Ei,Ej)
                             1
             else 0
