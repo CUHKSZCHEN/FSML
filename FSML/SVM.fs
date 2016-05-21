@@ -21,7 +21,7 @@ module SVM
         member private this.f (i:int) = (normalizedX*normalizedX.Row(i)).* Y*this.Alpha + this.b
 
         member private this.LH (i:int,j:int,alphaI,alphaJ) =
-            if Y.[i]=Y.[j] then  max 0.0 (alphaJ-alphaI), min C (C+alphaJ-alphaI)
+            if Y.[i]<>Y.[j] then  max 0.0 (alphaJ-alphaI), min C (C+alphaJ-alphaI)
             else max 0.0 (alphaJ+alphaI-C), min C (alphaI+alphaJ)
 
         member private this.eta(i:int,j:int)=
@@ -43,11 +43,12 @@ module SVM
             if (Y.[i]*(this.E i) < -tol && this.Alpha.[i]<C) || (Y.[i]*(this.E i) > tol && this.Alpha.[i]>0.0) then true else false
         
         member private this.update (iter:int)=
+            printfn "%A" iter
             let mutable pass=0
             for i in [0..n-1] do
                 if this.checkCondition i then
-                    pass<- pass+ this.updateSingle i
-            if pass >0 then iter+1 else iter
+                    pass<- pass + ( this.updateSingle i)
+            if pass = 0 then iter+1 else iter
         
         member private this.updateSingle (i:int)=
 
