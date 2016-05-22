@@ -1,5 +1,5 @@
 # FSML
-A machine learning project written in F#!
+A machine learning project written in F#
 
 ### Version
 0.1.1
