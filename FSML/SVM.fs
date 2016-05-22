@@ -30,6 +30,8 @@ module SVM
             for i in [0..n-1] do
                 for j in [0..n-1] do
                     KernelMatrix.[i,j] <- KernelFunc (i,j)
+        
+        new (x,y,C) = SVM(x,y,C,"linear",1.0)
 
         member private this.f (i:int) = (KernelMatrix.Column(i)).* Y*this.Alpha + this.b
 
@@ -64,7 +66,7 @@ module SVM
             if (Ei < -tol && this.Alpha.[i]<C) || (Ei > tol && this.Alpha.[i]>0.0) then true else false
         
         member private this.update (iter:int)=
-            printfn "%A" iter
+            //printfn "%A" iter
             let mutable pass=0
             for i in [0..n-1] do
                 pass<- pass + ( this.updateSingle i)
