@@ -59,4 +59,15 @@ let main argv =
     printfn "test  auc: %A" aucTest
     printfn "beta: %A" (ridge1.Beta.ToArray())
 
+    let svm=new SVM (xTrain, yTrain,1.0)
+
+    do svm.Fit()
+    let pTrain = svm.Predict xTrain
+    let pTest = svm.Predict xTest
+    let aucTrain=AUC yTrain pTrain
+    let aucTest=AUC yTest pTest
+    printfn "%A" "SVM classification:"
+    printfn "train auc: %A" aucTrain
+    printfn "test  auc: %A" aucTest
+
     0
