@@ -6,7 +6,7 @@ module SVM
     open MathNet.Numerics.LinearAlgebra
     open MathNet.Numerics.Statistics
 
-    type SVM (x:Matrix<double>,y:Vector<double>,C:double)=
+    type SVM (x:Matrix<double>,y:Vector<double>,C:double,K:string,var:double)=
         let n= y.Count
         let Y = y*2.0-1.0
         let tol = 1e-3
@@ -17,25 +17,46 @@ module SVM
         let maxPass=5
         let seed=1
         let rnd= System.Random(seed)
-        let innerProduct= normalizedX*normalizedX.Transpose()
+        let innerProduct=normalizedX*normalizedX.Transpose()
+        let linearKernel (i,j)= innerProduct.[i,j]
+        let rbfKernel (i,j) = exp (-(innerProduct.[i,i]+innerProduct.[j,j]-2.0*innerProduct.[i,j])/2.0/var)
+        let KernelFunc = match K with
+                            |"linear" -> linearKernel
+                            |"rbf" -> rbfKernel
+                            |_ -> raiseExcetion "please choose either linear or rbf kernel"
+        
+        let KernelMatrix = DenseMatrix.create n n 0.0
+        do
+            for i in [0..n-1] do
+                for j in [0..n-1] do
+                    KernelMatrix.[i,j] <- KernelFunc (i,j)
 
-        member private this.f (i:int) = (innerProduct.Column(i)).* Y*this.Alpha + this.b
+        member private this.f (i:int) = (KernelMatrix.Column(i)).* Y*this.Alpha + this.b
 
         member private this.LH (i:int,j:int,alphaI,alphaJ) =
             if Y.[i]<>Y.[j] then  max 0.0 (alphaJ-alphaI), min C (C+alphaJ-alphaI)
             else max 0.0 (alphaJ+alphaI-C), min C (alphaI+alphaJ)
 
         member private this.eta(i:int,j:int)=
-            2.0*innerProduct.[i,j] - innerProduct.[i,i] - innerProduct.[j,j]
+            2.0*KernelMatrix. [i,j] - KernelMatrix. [i,i] - KernelMatrix. [j,j]
 
         member val Alpha = (DenseVector.zero (n)) with get,set
         member val b=0.0 with get,set
+        member val var=1.0 with get
 
         member this.Predict (x:Vector<double>) = 
-            ((normalizedX*(normalize ((V x), mu, sigma)).Transpose()).Transpose()*(Y.*this.Alpha)+this.b).Map (fun e-> if e>0.0 then 1.0 else -1.0)
-        
+            this.Predict (x.ToRowMatrix())
+
         member this.Predict (x:Matrix<double>) =
-            ((normalizedX*(normalize ((M x), mu, sigma)).Transpose()).Transpose()*(Y.*this.Alpha)+this.b).Map (fun e-> if e>0.0 then 1.0 else -1.0)
+            let testMatrix = DenseMatrix.create x.RowCount n 0.0
+            let testNormalized=normalize ((M x), mu, sigma)
+            for i in [0..x.RowCount-1] do
+                for j in [0..n-1] do
+                    if K="linear" then
+                        testMatrix.[i,j] <- normalizedX.Row(j)*testNormalized.Row(i)
+                    else
+                        testMatrix.[i,j] <- exp (-(normalizedX.Row(j)*normalizedX.Row(j)+testNormalized.Row(i)*testNormalized.Row(i)-2.0*testNormalized.Row(i)*normalizedX.Row(j))/2.0/var)
+            (testMatrix*(Y.*this.Alpha)+this.b).Map (fun e-> if e>0.0 then 1.0 else -1.0)
 
         member private this.E (i:int)= this.f i - Y.[i]
 
@@ -51,8 +72,8 @@ module SVM
         
         member private this.updateAlphaI (i:int,j:int,alphaOldI,alphaOldJ,alphaJ,Ei,Ej)=
             let mutable alphaI = alphaOldI + Y.[i]*Y.[j]*(alphaOldJ-alphaJ)
-            let b1 = this.b - Ei - Y.[i]*(alphaI-alphaOldI)*(innerProduct.[i,i]) -  Y.[j]*(alphaJ-alphaOldJ)*(innerProduct.[i,j])    
-            let b2 = this.b - Ej - Y.[i]*(alphaI-alphaOldI)*(innerProduct.[i,j]) -  Y.[j]*(alphaJ-alphaOldJ)*(innerProduct.[j,j])
+            let b1 = this.b - Ei - Y.[i]*(alphaI-alphaOldI)*(KernelMatrix .[i,i]) -  Y.[j]*(alphaJ-alphaOldJ)*(KernelMatrix .[i,j])    
+            let b2 = this.b - Ej - Y.[i]*(alphaI-alphaOldI)*(KernelMatrix .[i,j]) -  Y.[j]*(alphaJ-alphaOldJ)*(KernelMatrix .[j,j])
             this.Alpha.[i] <- alphaI
             this.Alpha.[j] <- alphaJ
             this.b <- (b1+b2)/2.0
