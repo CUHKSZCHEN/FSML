@@ -16,7 +16,22 @@ module DataTypes
         | Y of double
         | X of int*double  
 
+    let parseClassificationVariable (e:string) = 
+        if e.StartsWith "+"  then Y 1.
+        else if e.StartsWith "-" then Y 0.
+        else let split = e.Split [|':'|]
+             X (int split.[0],double split.[1])
+
+    let parseRegressionVariable (e:string) =
+        if e.StartsWith "+"  then raiseExcetion "incorrect response variable type"
+        else if e.Contains(":") 
+        then 
+            let split = e.Split [|':'|]
+            X (int split.[0],double split.[1])
+        else Y (double e)
+
     type Imputation = Mean=0|Median=1|Min=2|Max=3
+        
 
     type data (foldedData:Map<int,seq<double*Map<int,double>>>, features:Set<int>)  =
         member this.FoldNumber= foldedData.Count
@@ -41,12 +56,13 @@ module DataTypes
 
 
 
-    type readData (filePath: string)=
-        let parseVariable (e:string) = 
-            if e.StartsWith "+"  then Y 1.
-            else if e.StartsWith "-" then Y 0.
-            else let split = e.Split [|':'|]
-                 X (int split.[0],double split.[1])
+    type readData (filePath: string, response: string)=
+
+        let parseVariable = 
+            match response with
+                | "binary" -> parseClassificationVariable
+                | "continuous" -> parseRegressionVariable
+                | _ -> raiseExcetion "resposne variable must be either binary for classification for continuous for regression"
         
         let parseLine (line : string) =
             line.Split ([|' ';'\t'|], System.StringSplitOptions.RemoveEmptyEntries) |> Array.map parseVariable
