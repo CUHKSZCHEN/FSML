@@ -53,7 +53,9 @@ module DataTypes
         member this.Test (fold:int)=
             this.GetTest fold |> List.ofSeq |> List.unzip |> 
                         (fun (a,b) -> (seq{for f in (Set.toList features |> List.sort) ->  (f,b |> this.GetColumn f)} |> Map.ofSeq |> Map.toSeq |> Seq.map snd |> DenseMatrix.ofColumnSeq ,a|> DenseVector.ofSeq))
-
+        
+        member this.All =
+            this.Train -1
 
 
     type readData (filePath: string, response: string)=
