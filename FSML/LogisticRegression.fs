@@ -18,36 +18,26 @@ module LogisticRegression
     type LR (x:Matrix<double>,y:Vector<double>)=
 
         let xWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
-
-        let reWeightedUpdate (beta:Vector<double>) =
-            let s=predictWith1 (beta, xWith1)
-            let p = (s ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
-            let loglik = Loglik s y
+        
+        let reWeightedUpdate (beta:Vector<double>)  =
+            let s = predictWith1 (beta, xWith1)
+            let p = (s).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
+            let loglik= Loglik s y
             do loglik |> printfn "Loglikelihood: %A"          
-            let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
-            let h = -xWith1.Transpose() * w *xWith1
-            let g=  xWith1.Transpose()*(y-p)
-            beta-h.Inverse()*g,-loglik
-
+            let w= p .* (1.0 - p)
+            let z= xWith1 * beta +  DiagonalMatrix.ofDiag(1.0/w) *  (y-p)
+            WeightedQRUpdate xWith1 z w, -loglik
+        
         member this.Predict (x:Vector<double>) = 
             predictWith1 (this.Beta, (x.ToRowMatrix().InsertColumn(0, DenseVector.create x.Count 1.0)))
         
         member this.Predict (x:Matrix<double>) =
                     predictWith1 (this.Beta, (x.InsertColumn(0, DenseVector.create x.RowCount 1.0)))
 
-        member val eps = 1e-6 with get,set
+        member val eps = 1e-12 with get,set
         member val maxIter = 100 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
-
-        member this.Update (beta:Vector<double>)  =
-            let s = predictWith1 (beta, xWith1)
-            let p = (s).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
-            let loglik= Loglik s y
-            do loglik |> printfn "Loglikelihood: %A"          
-            let w= DiagonalMatrix.ofDiag (p .* p.Negate().Add(1.0))
-            let z= xWith1 * beta + w.Inverse() *  (y-p)
-            (xWith1.Transpose() * w *xWith1).Inverse() * xWith1.Transpose() * w*z,-loglik
 
         member this.Fit () = this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
@@ -145,16 +135,21 @@ module LogisticRegression
             let w=p .* (p.Negate().Add(1.0))
             let pNew = p.Map (fun e -> if e<EPS then 0.0 else if e+EPS>1.0 then 1.0 else e)
             let wNew = Vector.map2 (fun e k -> if abs(e)<EPS then EPS else if abs(e)+EPS>1.0 then EPS else k) p w
+            let zNew= normalizedXWith1 * betaNew + (DiagonalMatrix.ofDiag wNew).Inverse() *  (y-pNew)
             if co = 0 then
                 let g= -wNew*((y-pNew)./wNew)/(double n)
                 let h= wNew.Sum()/(double n)
                 betaNew.Item(0)-g/h
             else
-                let g1 = -(normalizedXWith1.Column(co).*((y-pNew)./wNew).*wNew).Sum()/(double n) + Lambda
-                let h = wNew*(normalizedXWith1.Column(co).*normalizedXWith1.Column(co))/(double n)
-                if betaNew.Item(co) - g1/h> 0.0 then betaNew.Item(co) - g1/h else
-                    let g2 = g1 - 2.0 * Lambda
-                    if betaNew.Item(co) - g2/h< 0.0 then betaNew.Item(co) - g2/h else 0.0
+                let sto=(normalizedXWith1.Column(co).*wNew.*(zNew-s)).Sum()
+                let scale=(normalizedXWith1.Column(co).*normalizedXWith1.Column(co).*wNew).Sum()
+                if (sto>0.0 && Lambda<sto) then (sto - Lambda)/scale else 
+                    if (sto<0.0 && Lambda < -sto) then (sto + Lambda)/scale else 0.0
+//                let g1 = -(normalizedXWith1.Column(co).*((z-pNew)./wNew).*wNew).Sum()/(double n) + Lambda
+//                let h = wNew*(normalizedXWith1.Column(co).*normalizedXWith1.Column(co))/(double n)
+//                if betaNew.Item(co) - g1/h> 0.0 then betaNew.Item(co) - g1/h else
+//                    let g2 = g1 - 2.0 * Lambda
+//                    if betaNew.Item(co) - g2/h< 0.0 then betaNew.Item(co) - g2/h else 0.0
    
         let cyclicCoordinateDescentUpdate (beta:Vector<double>)=
             for i in [0..beta.Count-1] do 
@@ -182,4 +177,3 @@ module LogisticRegression
         
         member this.Predict (x:Matrix<double>) =
             predictWith1 (this.Beta, ((normalize ((M x), mu , sigma)).InsertColumn(0, DenseVector.create x.RowCount 1.0)))
-            
