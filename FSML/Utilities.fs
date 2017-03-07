@@ -7,6 +7,9 @@ module Utilities
 
     let predictWith1 (beta:Vector<double>, xWith1:Matrix<double>)= xWith1 * beta
 
+    let RMSE (y:Vector<double>) (p:Vector<double>)=
+        sqrt(((y-p) * (y-p))/(double y.Count))
+
     let AUC (y:Vector<double>) (score:Vector<double>)=
         let n1= y.Sum()
         let n0= (double) y.Count-n1
@@ -30,5 +33,13 @@ module Utilities
         match x with
         | V v -> (v.Add(mu.Negate())./sd).ToRowMatrix()
         | M m -> m.ToRowArrays() |> Array.map (fun row -> ((row |> DenseVector.ofArray).Add(mu.Negate())./(sd)).ToArray() ) |> DenseMatrix.ofRowArrays
-    
 
+    let QRUpdate (x:Matrix<double>) (y:Vector<double>)=
+        let qr=x.QR()
+        qr.R.Solve(qr.Q.Transpose()*y)
+
+    let WeightedQRUpdate (x:Matrix<double>) (y:Vector<double>) (w:Vector<double>)=
+        let wSqrt= w.PointwiseSqrt()
+        let xTilde = DiagonalMatrix.ofDiag(wSqrt) * x
+        let yTilde = wSqrt.*y
+        QRUpdate xTilde yTilde
