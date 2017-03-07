@@ -38,8 +38,20 @@ module Utilities
         let qr=x.QR()
         qr.R.Solve(qr.Q.Transpose()*y)
 
+    let SVDUpdate (x:Matrix<double>) (y:Vector<double>)=
+        let svd=x.Svd()
+        let D= svd.W
+        let W = DiagonalMatrix.ofDiagArray2 D.RowCount D.ColumnCount  (D.Diagonal().ToArray() |> Array.map (fun e -> if e=0.0 then 0.0 else 1.0/e) )
+        svd.VT.Transpose() * W.Transpose() * svd.U.Transpose() *y
+
     let WeightedQRUpdate (x:Matrix<double>) (y:Vector<double>) (w:Vector<double>)=
         let wSqrt= w.PointwiseSqrt()
         let xTilde = DiagonalMatrix.ofDiag(wSqrt) * x
         let yTilde = wSqrt.*y
         QRUpdate xTilde yTilde
+
+    let WeightedSVDUpdate (x:Matrix<double>) (y:Vector<double>) (w:Vector<double>)=
+        let wSqrt= w.PointwiseSqrt()
+        let xTilde = DiagonalMatrix.ofDiag(wSqrt) * x
+        let yTilde = wSqrt.*y
+        SVDUpdate xTilde yTilde
