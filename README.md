@@ -2,7 +2,7 @@
 A machine learning project written in F#
 
 ### Version
-0.1.1
+0.1.2
 
 ### Algorithms implemented:
   - Linear Regression (Ridge)
