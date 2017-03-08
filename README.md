@@ -5,7 +5,7 @@ A machine learning project written in F#
 0.1.2
 
 ### Algorithms implemented:
-  - Linear Regression (Ridge)
+  - Linear Regression (L1 and L2)
   - Logistic Regression without regularization by reweighted least square
   - Lasso Logistic Regression with L1 regularization by cyclic coordinate descent
   - Ridge Logistic Regression with L2 regularization by two algorithms, i.e., cyclic coordinate descent and exact newton update
