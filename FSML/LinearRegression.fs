@@ -29,7 +29,6 @@ module LinearRegression
 
         let n= y.Count
         let Lambda= lambda 
-        let EPS = 1e-12
         let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
@@ -51,7 +50,6 @@ module LinearRegression
     type LinearLASSO (x:Matrix<double>,y:Vector<double>,lambda)=
         let n= y.Count
         let Lambda=lambda 
-        let EPS = 1e-12
         let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
@@ -69,10 +67,10 @@ module LinearRegression
             let J = (y-yiTilde)*(y-yiTilde)/(double n)/2.0  
             let loss = J + (beta.Map (fun e -> abs(e))).Sum()*Lambda
             do printfn "Real loss: %A \t penalized Loss: %A" J  loss
-            beta,-loss
+            beta, loss
 
-        member val eps = 1e-12 with get,set
-        member val maxIter = 50 with get,set
+        member val eps = 1e-16 with get,set
+        member val maxIter = 100 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount)) with get,set
         
