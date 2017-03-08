@@ -54,11 +54,21 @@ module LogisticRegression
             let xTilde = DenseMatrix.stack [normalizedX; DenseVector.create normalizedX.ColumnCount (sqrt(Lambda)) |> DenseMatrix.ofDiag ]
             let z = eta + (y - pTilde)./w
             let beta0 = z.Sum()/(double n)
-            let zTilde = - beta.Item(0) +  (Array.concat[z.AsArray(); Array.zeroCreate normalizedX.ColumnCount] |> DenseVector.ofArray )
+            let zTilde = Array.concat[(z- beta0).AsArray(); Array.zeroCreate normalizedX.ColumnCount] |> DenseVector.ofArray
             let loglik = Loglik eta y
+            let j1= -w.*(z-eta) *(z-eta)/2.0/(double n) + (betaj.Map (fun e -> e*e)).Sum()*Lambda/2.0
+
             let loss = -loglik/(double n)/2.0 + (betaj.Map (fun e -> e*e)).Sum()*Lambda/2.0
-            do printfn "Real Loglikelihood: %A \t loss: %A" (Loglik eta y) loss
-            printfn "beta: %A" (beta.ToArray())
+            do printfn "before Real Loglikelihood: %A \t loss: %A \t j:%A" (Loglik eta y) loss j1
+            printfn "before beta: %A" (beta.[0])
+            let np = Array.concat[Array.create 1 beta0; (WeightedQRUpdate xTilde zTilde wTilde).ToArray()] |> DenseVector.ofArray
+            let loglik1 = Loglik (np.[0] + predictWith1 (np.[1..], normalizedX)) y
+            let loss1 = -loglik1/(double n)/2.0 + (np.[1..].Map (fun e -> e*e)).Sum()*Lambda/2.0
+            let j2= -w.*(z- beta0 - predictWith1 (np.[1..], normalizedX))*(z-beta0- predictWith1 (np.[1..], normalizedX))/2.0/(double n) + (np.[1..].Map (fun e -> e*e)).Sum()*Lambda/2.0
+            
+            do printfn "after Real Loglikelihood: %A \t loss: %A \t j:%A" (loglik1) loss1 j2
+            printfn "after beta: %A" (np.[0])
+
             Array.concat[Array.create 1 beta0; (WeightedQRUpdate xTilde zTilde wTilde).ToArray()] |> DenseVector.ofArray ,loss            
         
         member val eps = 1e-16 with get,set
