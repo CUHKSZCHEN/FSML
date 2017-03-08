@@ -55,3 +55,15 @@ module Utilities
         let xTilde = DiagonalMatrix.ofDiag(wSqrt) * x
         let yTilde = wSqrt.*y
         SVDUpdate xTilde yTilde
+
+    let STO (z) (gamma) =
+        if gamma >= abs(z) then 0.0
+        else if z>0.0 then z-gamma
+        else z+gamma
+
+    let rec update f (parameter:Vector<double>) (eps:double) (iter:int) (maxIter:int) (minIter:int) (lossOld:double) =
+        if iter >= maxIter then parameter
+        else
+            let paramNew,lossNew = f parameter
+            if lossOld - lossNew <  eps && iter >= minIter then parameter
+            else update f paramNew eps (iter+1) maxIter minIter lossOld
