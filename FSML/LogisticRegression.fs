@@ -31,7 +31,7 @@ module LogisticRegression
 
         member this.Fit () = this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
-     type RIDGE (x:Matrix<double>,y:Vector<double>,lambda)=
+     type LrRidge (x:Matrix<double>,y:Vector<double>,lambda)=
         let n= y.Count
         let Lambda=lambda 
         let EPS = 1e-6
@@ -73,7 +73,7 @@ module LogisticRegression
             this.Beta.[0] + predictWith1 (this.Beta.[1..], normalize ((M x), mu, sigma))
 
 
-    type LASSO (x:Matrix<double>,y:Vector<double>,lambda)=
+    type LrLasso (x:Matrix<double>,y:Vector<double>,lambda)=
         let n= y.Count
         let Lambda=lambda 
         let EPS = 1e-6
