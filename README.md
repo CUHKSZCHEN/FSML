@@ -6,6 +6,7 @@ A machine learning project written in F#
 
 ### Algorithms implemented:
   - Linear Regression (no penalty, L1 and L2)
+    * a
   - Logistic Regression (no penalty, L1 and L2)
   - SVM with linear and rbf(Gaussian) kernel function by Sequential Minimal Optimization (SMO)
 
