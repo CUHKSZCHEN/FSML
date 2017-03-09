@@ -6,7 +6,7 @@ module LinearRegression
     open MathNet.Numerics.LinearAlgebra
 
 
-    type LinearR (x:Matrix<double>,y:Vector<double>)=
+    type Lm (x:Matrix<double>,y:Vector<double>)=
 
         let xWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
 
@@ -25,7 +25,7 @@ module LinearRegression
             this.Beta <- QRUpdate xWith1 y
 
 
-    type LinearRidge (x:Matrix<double>,y:Vector<double>,lambda)=
+    type LmRidge (x:Matrix<double>,y:Vector<double>,lambda)=
 
         let n= y.Count
         let Lambda= lambda 
@@ -46,7 +46,7 @@ module LinearRegression
             let yTilde =  Array.concat[(y-beta0).AsArray(); Array.zeroCreate normalizedX.ColumnCount] |> DenseVector.ofArray
             this.Beta <- QRUpdate xTilde yTilde
 
-    type LinearLASSO (x:Matrix<double>,y:Vector<double>,lambda)=
+    type LmLasso (x:Matrix<double>,y:Vector<double>,lambda)=
         let n= y.Count
         let Lambda=lambda 
         let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
