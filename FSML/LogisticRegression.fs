@@ -38,28 +38,31 @@ module LogisticRegression
         let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
-
+        let normalizedXwith1= normalizedX.InsertColumn(0, DenseVector.create x.RowCount 1.0)
         let reWeightedUpdate (beta:Vector<double>) =
 
-            let eta = beta.[0] + predictWith1 (beta.[1..], normalizedX)
-            let pTilde = (eta ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
-            let w = pTilde.*(1.0 - pTilde)
+            let eta = predictWith1 (beta, normalizedXwith1)
+            let p = (eta ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
+            let w = p.*(1.0 - p)
+            let wNew = Vector.map2 (fun e k -> if abs(e)<EPS then EPS else if abs(e)+EPS>1.0 then EPS else k) p w
+            let pTilde = p.Map (fun e -> if e<EPS then 0.0 else if e+EPS>1.0 then 1.0 else e)
 
-            let wTilde =  Array.concat[w.AsArray(); [| for e in 1..normalizedX.ColumnCount -> 1.0|]] |> DenseVector.ofArray
-            let xTilde = DenseMatrix.stack [normalizedX; DenseVector.create normalizedX.ColumnCount (sqrt(double n * Lambda)) |> DenseMatrix.ofDiag ]
-            let z = eta + (y - pTilde)./w
-            let beta0 = z.Sum()/(double n)
-            let zTilde = Array.concat[(z- beta0).AsArray(); Array.zeroCreate normalizedX.ColumnCount] |> DenseVector.ofArray
+            let wTilde =  Array.concat[wNew.AsArray(); [| for e in 1..normalizedXwith1.ColumnCount -> 1.0|]] |> DenseVector.ofArray
+            let xTilde = DenseMatrix.stack [normalizedXwith1; DenseVector.create normalizedXwith1.ColumnCount (sqrt(double n * Lambda)) |> DenseMatrix.ofDiag ]
+            do xTilde.Item(n,0) <- 0.0
+            let z = eta + (y - pTilde)./wNew
+            let zTilde = Array.concat[(z).AsArray(); Array.zeroCreate normalizedXwith1.ColumnCount] |> DenseVector.ofArray
 
-            let beta_new = Array.concat[Array.create 1 beta0; (WeightedQRUpdate xTilde zTilde wTilde).ToArray()] |> DenseVector.ofArray
-            let eta_new = beta_new.[0] + predictWith1 (beta_new.[1..], normalizedX)
+            let beta_new =  (WeightedQRUpdate xTilde zTilde wTilde).ToArray() |> DenseVector.ofArray
+
+            let eta_new = predictWith1 (beta_new, normalizedXwith1)
             let loglik_new = Loglik eta_new y
-            let loss_new = -loglik_new/(double n)/2.0 + (beta_new.[1..].Map (fun e -> e*e)).Sum()*Lambda/2.0
+            let loss_new = -loglik_new/(double n) + (beta_new.[1..].Map (fun e -> e*e)).Sum()*Lambda/2.0
             do printfn "Real Loglikelihood: %A \t loss: %A" (loglik_new) loss_new
             beta_new, loss_new            
         
         member val eps = 1e-16 with get,set
-        member val maxIter = 10000 with get,set
+        member val maxIter = 1000 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         
@@ -71,7 +74,6 @@ module LogisticRegression
         
         member this.Predict (x:Matrix<double>) =
             this.Beta.[0] + predictWith1 (this.Beta.[1..], normalize ((M x), mu, sigma))
-
 
     type LrLasso (x:Matrix<double>,y:Vector<double>,lambda)=
         let n= y.Count
