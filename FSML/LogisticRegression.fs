@@ -5,7 +5,7 @@ module LogisticRegression
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
     
-    type LR (x:Matrix<double>,y:Vector<double>)=
+    type Lr (x:Matrix<double>,y:Vector<double>)=
 
         let xWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
         
