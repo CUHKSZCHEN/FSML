@@ -46,7 +46,6 @@ module LinearRegression
             let yTilde =  Array.concat[(y-beta0).AsArray(); Array.zeroCreate normalizedX.ColumnCount] |> DenseVector.ofArray
             this.Beta <- QRUpdate xTilde yTilde
 
-
     type LinearLASSO (x:Matrix<double>,y:Vector<double>,lambda)=
         let n= y.Count
         let Lambda=lambda 
