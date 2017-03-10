@@ -35,8 +35,7 @@ open LinearRegression
 open Utilities
 [<EntryPoint>]
 let main argv = 
-    //let dat= new readData (@"/data/continuous.txt", "continuous")
-    let dat= new readData (@"/c://test.txt", "continuous")
+    let dat= new readData (@"/data/continuous.txt", "continuous")
     let seed=1 // random seed
     let folds=3 // split data into 3 folds
     let datFold = new data (dat.CreateFold folds seed ,dat.Features) // prepare data
