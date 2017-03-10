@@ -78,3 +78,8 @@ let main argv =
     printfn "test  rmse: %A" rmseTestl1
     printfn "beta: %A" (lml1.Beta.ToArray())
 ```
+
+
+## 1. Logistic regression
+
+We use the data /data/binary.txt, which is stored in the libsvm format.
