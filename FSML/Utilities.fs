@@ -44,7 +44,7 @@ module Utilities
         -(y*pNew.PointwiseLog() + (y.Negate().Add(1.0))*pNew.Negate().Add(1.0).PointwiseLog()) /(double p.Count)
 
     let getNormalizeParameter (x:Matrix<double>) =
-        x.ColumnSums().Divide(double x.RowCount),x.ToColumnArrays() |> Array.map (fun col -> col.StandardDeviation() ) |> DenseVector.ofArray
+        x.ColumnSums().Divide(double x.RowCount),x.ToColumnArrays() |> Array.map (fun col -> sqrt(col.Variance() *((double col.Length)-1.0)/(double col.Length) )) |> DenseVector.ofArray
 
 
     let QRUpdate (x:Matrix<double>) (y:Vector<double>)=
