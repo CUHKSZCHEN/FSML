@@ -2,7 +2,6 @@
 
 A machine learning project written in F#
 
-
 ## Introduction
 
 ### Version
