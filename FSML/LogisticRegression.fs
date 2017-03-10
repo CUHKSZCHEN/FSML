@@ -13,7 +13,7 @@ module LogisticRegression
             let s = predictWith1 (beta, xWith1)
             let p = (s).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
             let loglik= Loglik s y
-            do loglik |> printfn "Loglikelihood: %A"          
+            do loglik |> printfn "Loglikelihood: %10.16f"          
             let w= p .* (1.0 - p)
             let z= xWith1 * beta +  DiagonalMatrix.ofDiag(1.0/w) *  (y-p)
             WeightedQRUpdate xWith1 z w, -loglik
@@ -24,8 +24,8 @@ module LogisticRegression
         member this.Predict (x:Matrix<double>) =
                     predictWith1 (this.Beta, (x.InsertColumn(0, DenseVector.create x.RowCount 1.0)))
 
-        member val eps = 1e-12 with get,set
-        member val maxIter = 100 with get,set
+        member val eps = 1e-16 with get,set
+        member val maxIter = 1000 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
 
@@ -58,7 +58,7 @@ module LogisticRegression
             let eta_new = predictWith1 (beta_new, normalizedXwith1)
             let loglik_new = Loglik eta_new y
             let loss_new = -loglik_new/(double n) + (beta_new.[1..].Map (fun e -> e*e)).Sum()*Lambda/2.0
-            do printfn "Real Loglikelihood: %A \t loss: %A" (loglik_new) loss_new
+            do printfn "Real Loglikelihood: %10.16f \t loss: %10.16f" (loglik_new) loss_new
             beta_new, loss_new            
         
         member val eps = 1e-16 with get,set
@@ -82,16 +82,21 @@ module LogisticRegression
         let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
+        let normalizedXwith1= normalizedX.InsertColumn(0, DenseVector.create x.RowCount 1.0)
+
         let mutable response = DenseVector.create n 0.0
         let mutable weight= DenseVector.create n 1.0
+
         let coordinateDescent (beta:Vector<double>) (co:int)=            
 
-            let yiTilde = beta.[0] + predictWith1 (beta.[1..], normalizedX) - beta.[co]*normalizedX.Column(co-1)
-            let z=normalizedX.Column(co-1) .*weight * (response-yiTilde) / (double n)    
-            (STO z lambda)/(weight.*normalizedX.Column(co-1)*normalizedX.Column(co-1)/(double n))
+            let yiTilde = predictWith1 (beta, normalizedXwith1) - beta.[co]*normalizedXwith1.Column(co)
+            let z=normalizedXwith1.Column(co) .*weight * (response-yiTilde) / (double n) 
+            let d= weight.*normalizedXwith1.Column(co)*normalizedXwith1.Column(co)/(double n)
+            if co = 0 then z/d
+            else (STO z lambda)/d
 
         let cyclicCoordinateDescentUpdate (beta:Vector<double>)=
-            let eta = beta.[0] + predictWith1 (beta.[1..], normalizedX)
+            let eta = predictWith1 (beta, normalizedXwith1)
             let p = (eta ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
             let w =  p.*(1.0 - p)
 
@@ -99,21 +104,19 @@ module LogisticRegression
             do weight <- Vector.map2 (fun e k -> if abs(e)<EPS then EPS else if abs(e)+EPS>1.0 then EPS else k) p w
             do response <- eta + (y - pNew)./weight
 
-            do beta.Item(0) <- response.Sum()/(double n)
-
-            for i in [1..beta.Count-1] do 
+            for i in [0..beta.Count-1] do 
                 beta.Item(i) <- (coordinateDescent beta i)
 
-            let eta_new = beta.[0] + predictWith1 (beta.[1..], normalizedX)
+            let eta_new = predictWith1 (beta, normalizedXwith1)
 
             let loglik_new = Loglik eta_new y
-            let loss_new = -loglik_new/(double n)/2.0 + (beta.[1..].Map (fun e -> abs(e))).Sum()*Lambda
-            do printfn "Real Loglikelihood: %A \t loss: %A" (loglik_new) loss_new
+            let loss_new = -loglik_new/(double n) + (beta.[1..].Map (fun e -> abs(e))).Sum()*Lambda
+            do printfn "Real Loglikelihood: %10.16f \t loss: %10.16f" (loglik_new) loss_new
             beta, loss_new
 
         member val eps = 1e-16 with get,set
-        member val maxIter = 100 with get,set
-        member val minIter = 20 with get,set
+        member val maxIter = 1000 with get,set
+        member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         
         member this.Fit () = 
