@@ -134,3 +134,7 @@ let main argv =
     printfn "test  auc: %A" aucTestl1
     printfn "beta: %A" (lrl1.Beta.ToArray())
 ```
+
+## 3. SVM
+
+We use the data /data/binary.txt, which is stored in the libsvm format.
