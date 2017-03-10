@@ -21,10 +21,10 @@ A machine learning project written in F#
   - cox ph model
   - subdistribution model
 
-# Examples
+## Examples
 
 
-## 1. Linear regression
+### 1. Linear regression
 
 We use the data /data/continuous.txt, which is stored in the libsvm format. Please note that no imputation is implemented at this time so missing values in the data file would throw exceptions.
 
@@ -80,7 +80,7 @@ let main argv =
 ```
 
 
-## 2. Logistic regression
+### 2. Logistic regression
 
 We use the data /data/binary.txt, which is stored in the libsvm format.
 
