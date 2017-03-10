@@ -151,7 +151,7 @@ open SVM
 open Utilities
 [<EntryPoint>]
 let main argv = 
-    let dat= new readData (@"c://r//testb.txt", "binary")
+    let dat= new readData (@"/data/binary.txt", "binary")
     let seed=1 // random seed
     let folds=3 // split data into 3 folds
     let datFold = new data (dat.CreateFold folds seed ,dat.Features) // prepare data
