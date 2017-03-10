@@ -104,8 +104,8 @@ let main argv =
     // train a standard logistic regression
     let lr= new LR(xTrain,yTrain)
     do lr.Fit()
-    let pTrain = lr.Predict xTrain // make prediction on training data
-    let pTest = lr.Predict xTest // make prediction on testing data
+    let pTrain = lr.Predict (xTrain, "response") // make prediction of probabilities on training data, if the second parameter is ignored, default link function would be used.
+    let pTest = lr.Predict (xTest, "response") // make prediction of probabilities on testing data
     let aucTrain= AUC yTrain pTrain // compute auc on training data
     let aucTest= AUC yTest pTest // compute auc on testing data
     printfn "train auc: %A" aucTrain
