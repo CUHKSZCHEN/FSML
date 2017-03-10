@@ -21,7 +21,7 @@ A machine learning project written in F#
   - cox ph model
   - subdistribution model
 
-# Documentation
+# Examples
 
 
 ## 1. Linear regression
