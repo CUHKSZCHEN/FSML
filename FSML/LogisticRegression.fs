@@ -2,36 +2,63 @@ module LogisticRegression
     
     open DataTypes
     open Utilities
+    open GLM
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
     
-    type Lr (x:Matrix<double>,y:Vector<double>)=
-
+    type LR (xTrain:Matrix<double>,yTrain:Vector<double>)=
+        inherit model()
+        let x,y=xTrain,yTrain
         let xWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
         
         let reWeightedUpdate (beta:Vector<double>)  =
             let s = predictWith1 (beta, xWith1)
             let p = (s).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
             let loglik= Loglik s y
-            do loglik |> printfn "Loglikelihood: %10.16f"          
+            do loglik |> printfn "Loglikelihood: %10.15f"          
             let w= p .* (1.0 - p)
             let z= xWith1 * beta +  DiagonalMatrix.ofDiag(1.0/w) *  (y-p)
             WeightedQRUpdate xWith1 z w, -loglik
         
+                
+        override this.Family = "Logistic regression"
+        override this.Penalty = "None"
+
         member this.Predict (x:Vector<double>) = 
             predictWith1 (this.Beta, (x.ToRowMatrix().InsertColumn(0, DenseVector.create x.Count 1.0)))
         
         member this.Predict (x:Matrix<double>) =
                     predictWith1 (this.Beta, (x.InsertColumn(0, DenseVector.create x.RowCount 1.0)))
 
+
+        override this.Predict(x:Vector<double>,?value:string) = 
+            let value = defaultArg value "link"
+            let link = predictLinear(this.Beta.[1..],V x) + this.Beta.[0]
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic
+            | _ -> raiseExcetion "predict either link or response"
+
+        override this.Predict(x:Matrix<double>,?value:string) = 
+            let value = defaultArg value "link"
+            let link = predictLinear(this.Beta.[1..],M x) + this.Beta.[0]
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic
+            | _ -> raiseExcetion "predict either link or response"
+
+
         member val eps = 1e-16 with get,set
         member val maxIter = 1000 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
 
-        member this.Fit () = this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
+        override this.Fit () = this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
-     type LrRidge (x:Matrix<double>,y:Vector<double>,lambda)=
+     type LRRidge (xTrain:Matrix<double>,yTrain:Vector<double>,lambda)=
+        inherit model()
+        let x,y=xTrain,yTrain
+
         let n= y.Count
         let Lambda=lambda 
         let EPS = 1e-6
@@ -58,15 +85,16 @@ module LogisticRegression
             let eta_new = predictWith1 (beta_new, normalizedXwith1)
             let loglik_new = Loglik eta_new y
             let loss_new = -loglik_new/(double n) + (beta_new.[1..].Map (fun e -> e*e)).Sum()*Lambda/2.0
-            do printfn "Real Loglikelihood: %10.16f \t loss: %10.16f" (loglik_new) loss_new
+            do printfn "Real Loglikelihood: %10.15f \t loss: %10.15f" (loglik_new) loss_new
             beta_new, loss_new            
         
         member val eps = 1e-16 with get,set
         member val maxIter = 1000 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
-        
-        member this.Fit () = 
+        override this.Family = "Logistic regression"
+        override this.Penalty = "L2"
+        override this.Fit () = 
             this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
         member this.Predict (x:Vector<double>) = 
@@ -75,7 +103,26 @@ module LogisticRegression
         member this.Predict (x:Matrix<double>) =
             this.Beta.[0] + predictWith1 (this.Beta.[1..], normalize ((M x), mu, sigma))
 
-    type LrLasso (x:Matrix<double>,y:Vector<double>,lambda)=
+        
+        override this.Predict(x:Vector<double>,?value:string) = 
+            let value = defaultArg value "link"
+            let link = predictLinearScale(this.Beta.[1..],V x,mu,sigma ) + this.Beta.[0] 
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic 
+            | _ -> raiseExcetion "predict either link or response"
+
+        override this.Predict(x:Matrix<double>,?value:string) = 
+            let value = defaultArg value "link"
+            let link = predictLinearScale(this.Beta.[1..],M x,mu,sigma ) + this.Beta.[0] 
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic
+            | _ -> raiseExcetion "predict either link or response"
+
+    type LRLasso (xTrain:Matrix<double>,yTrain:Vector<double>,lambda)=
+        inherit model()
+        let x,y=xTrain,yTrain
         let n= y.Count
         let Lambda=lambda 
         let EPS = 1e-6
@@ -111,19 +158,31 @@ module LogisticRegression
 
             let loglik_new = Loglik eta_new y
             let loss_new = -loglik_new/(double n) + (beta.[1..].Map (fun e -> abs(e))).Sum()*Lambda
-            do printfn "Real Loglikelihood: %10.16f \t loss: %10.16f" (loglik_new) loss_new
+            do printfn "Real Loglikelihood: %10.15f \t loss: %10.15f" (loglik_new) loss_new
             beta, loss_new
 
+        override this.Family = "Logistic regression"
+        override this.Penalty = "L1"
         member val eps = 1e-16 with get,set
         member val maxIter = 1000 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         
-        member this.Fit () = 
+        override this.Fit () = 
             this.Beta <- (update cyclicCoordinateDescentUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
-        member this.Predict (x:Vector<double>) = 
-            this.Beta.[0] + predictWith1 (this.Beta.[1..], normalize ((V x), mu, sigma))
-        
-        member this.Predict (x:Matrix<double>) =
-            this.Beta.[0] + predictWith1 (this.Beta.[1..], normalize ((M x), mu, sigma))
+        override this.Predict(x:Vector<double>,?value:string) = 
+            let value = defaultArg value "link"
+            let link = predictLinearScale(this.Beta.[1..],V x,mu,sigma ) + this.Beta.[0] 
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic 
+            | _ -> raiseExcetion "predict either link or response"
+
+        override this.Predict(x:Matrix<double>,?value:string) = 
+            let value = defaultArg value "link"
+            let link = predictLinearScale(this.Beta.[1..],M x,mu,sigma ) + this.Beta.[0] 
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic
+            | _ -> raiseExcetion "predict either link or response"
