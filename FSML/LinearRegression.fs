@@ -65,11 +65,11 @@ module LinearRegression
             let yiTilde = beta0 + predictWith1 (beta, normalizedX)
             let J = (y-yiTilde)*(y-yiTilde)/(double n)/2.0  
             let loss = J + (beta.Map (fun e -> abs(e))).Sum()*Lambda
-            do printfn "Real loss: %A \t penalized Loss: %A" J  loss
+            do printfn "Real loss: %10.16f \t penalized Loss: %10.16f" J  loss
             beta, loss
 
         member val eps = 1e-16 with get,set
-        member val maxIter = 100 with get,set
+        member val maxIter = 1000 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount)) with get,set
         
