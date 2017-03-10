@@ -80,6 +80,6 @@ let main argv =
 ```
 
 
-## 1. Logistic regression
+## 2. Logistic regression
 
 We use the data /data/binary.txt, which is stored in the libsvm format.
