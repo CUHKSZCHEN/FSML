@@ -8,16 +8,13 @@ module LinearRegression
 
     type LM (xTrain:Matrix<double>,yTrain:Vector<double>)=
         inherit model()
-        let mutable x,y=xTrain,yTrain
+        let x,y=xTrain,yTrain
         let xWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
         override this.Family = "LM"
         override this.Penalty = "None"
 
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
 
-        // chol decomposition
-        //member this.Fit () = this.Beta <-  ( xWith1.TransposeThisAndMultiply(xWith1).Cholesky().Solve(xWith1.TransposeThisAndMultiply(y)) )
-        // QR decomposition
         override this.Fit () = 
             this.Beta <- QRUpdate xWith1 y
         
@@ -37,11 +34,13 @@ module LinearRegression
             | "response" -> link
             | _ -> raiseExcetion "predict either link or response"
  
-    type LMRidge (x:Matrix<double>,y:Vector<double>,lambda)=
+    type LMRidge (xTrain:Matrix<double>,yTrain:Vector<double>,lambda)=
         inherit model()
+        let x,y=xTrain,yTrain
 
         let n= y.Count
-        let Lambda= lambda 
+        let Lambda=  lambda
+
         let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
 
         let mu,sigma = x|> getNormalizeParameter
@@ -74,7 +73,9 @@ module LinearRegression
             let yTilde =  Array.concat[(y-beta0).AsArray(); Array.zeroCreate normalizedX.ColumnCount] |> DenseVector.ofArray
             this.Beta <- QRUpdate xTilde yTilde
 
-    type LMLasso (x:Matrix<double>,y:Vector<double>,lambda)=
+    type LMLasso (xTrain:Matrix<double>,yTrain:Vector<double>,lambda)=
+        inherit model()
+        let x,y=xTrain,yTrain
         let n= y.Count
         let Lambda=lambda 
         let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
@@ -93,18 +94,33 @@ module LinearRegression
             let yiTilde = beta0 + predictWith1 (beta, normalizedX)
             let J = (y-yiTilde)*(y-yiTilde)/(double n)/2.0  
             let loss = J + (beta.Map (fun e -> abs(e))).Sum()*Lambda
-            do printfn "Real loss: %A \t penalized Loss: %A" J  loss
+            do printfn "Real loss: %10.15f \t penalized Loss: %10.15f" J  loss
             beta, loss
+        
+        override this.Family = "LM"
+        override this.Penalty = "L1"
 
         member val eps = 1e-16 with get,set
         member val maxIter = 100 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount)) with get,set
         
-        member this.Fit() = this.Beta <- (update cyclicCoordinateDescentUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
+        override this.Fit() = this.Beta <- (update cyclicCoordinateDescentUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
-        member this.Predict (x:Vector<double>) = 
-            beta0 + predictWith1 (this.Beta, normalize ((V x), mu, sigma))
-        
-        member this.Predict (x:Matrix<double>) =
-            beta0 + predictWith1 (this.Beta, normalize ((M x), mu , sigma))
+        override this.Predict(x:Vector<double>,?value:string) = 
+            let value = defaultArg value "link"
+            let link = predictLinearScale(this.Beta,V x,mu,sigma ) + beta0
+            match value with 
+            | "link" -> link
+            | "response" -> link
+            | _ -> raiseExcetion "predict either link or response"
+
+        override this.Predict(x:Matrix<double>,?value:string) = 
+            let value = defaultArg value "link"
+            let link = predictLinearScale(this.Beta, M x, mu, sigma) + beta0
+            match value with 
+            | "link" -> link
+            | "response" -> link
+            | _ -> raiseExcetion "predict either link or response"
+
+   
