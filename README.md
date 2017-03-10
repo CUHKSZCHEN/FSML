@@ -83,3 +83,54 @@ let main argv =
 ## 2. Logistic regression
 
 We use the data /data/binary.txt, which is stored in the libsvm format.
+
+
+```fsharp
+open DataTypes
+open LogisticRegression
+open Utilities
+[<EntryPoint>]
+let main argv = 
+    let dat= new readData (@"/data/binary.txt", "binary")
+    let seed=1 // random seed
+    let folds=3 // split data into 3 folds
+    let datFold = new data (dat.CreateFold folds seed ,dat.Features) // prepare data
+    let fold=1 // use fold 1 for test and the others for train
+    let xTrain,yTrain= datFold.Train fold
+    // in case to train the model using all data:
+    //let xTrain,yTrain= datFold.All 
+    let xTest,yTest= datFold.Test fold
+
+    // train a standard logistic regression
+    let lr= new LR(xTrain,yTrain)
+    do lr.Fit()
+    let pTrain = lr.Predict xTrain // make prediction on training data
+    let pTest = lr.Predict xTest // make prediction on testing data
+    let aucTrain= AUC yTrain pTrain // compute auc on training data
+    let aucTest= AUC yTest pTest // compute auc on testing data
+    printfn "train auc: %A" aucTrain
+    printfn "test  auc: %A" aucTest
+    printfn "beta: %A" (lr.Beta.ToArray())
+
+    // train a logistic regression with L2 penalty, i.e., ridge linear regression
+    let lrl2= new LRRidge(xTrain,yTrain,0.2) // lambda = 0.2 is the penalty parameter
+    do lrl2.Fit()
+    let pTrainl2 = lrl2.Predict xTrain // make prediction on training data
+    let pTestl2 = lrl2.Predict xTest // make prediction on testing data
+    let aucTrainl2 =AUC yTrain pTrainl2 // compute auc on training data
+    let aucTestl2 =AUC yTest pTestl2 // compute auc on testing data
+    printfn "train auc: %A" aucTrainl2
+    printfn "test  auc: %A" aucTestl2
+    printfn "beta: %A" (lrl2.Beta.ToArray())
+
+    // train a logistic regression with L1 penalty, i.e., lasso linear regression
+    let lrl1= new LRLasso(xTrain,yTrain,0.2) // lambda = 0.2 is the penalty parameter
+    do lrl1.Fit()
+    let pTrainl1 = lrl1.Predict xTrain // make prediction on training data
+    let pTestl1 = lrl1.Predict xTest // make prediction on testing data
+    let aucTrainl1 =AUC yTrain pTrainl1 // compute auc on training data
+    let aucTestl1 =AUC yTest pTestl1 // compute auc on testing data
+    printfn "train auc: %A" aucTrainl1
+    printfn "test  auc: %A" aucTestl1
+    printfn "beta: %A" (lrl1.Beta.ToArray())
+```
