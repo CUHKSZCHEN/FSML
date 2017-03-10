@@ -68,7 +68,7 @@ let main argv =
     printfn "beta: %A" (lml2.Beta.ToArray())
 
     // train a linear regression with L1 penalty, i.e., lasso linear regression
-    let lml1= new LMRidge(xTrain,yTrain,0.2) // lambda = 0.2 is the penalty parameter
+    let lml1= new LMLasso(xTrain,yTrain,0.2) // lambda = 0.2 is the penalty parameter
     do lml1.Fit()
     let pTrainl1 = lml1.Predict xTrain // make prediction on training data
     let pTestl1 = lml1.Predict xTest // make prediction on testing data
