@@ -7,6 +7,23 @@ module Utilities
 
     let predictWith1 (beta:Vector<double>, xWith1:Matrix<double>)= xWith1 * beta
 
+    let normalize (x:VectorOrMatrix,mu:Vector<double>,sd:Vector<double>) =
+        match x with
+        | V v -> (v.Add(mu.Negate())./sd).ToRowMatrix()
+        | M m -> m.ToRowArrays() |> Array.map (fun row -> ((row |> DenseVector.ofArray).Add(mu.Negate())./(sd)).ToArray() ) |> DenseMatrix.ofRowArrays
+
+    let predictLinear (beta:Vector<double>, x:VectorOrMatrix) = 
+        match x with 
+        | V x -> [x*beta] |> DenseVector.ofList
+        | M x -> x* beta
+    
+    let predictLinearScale (beta:Vector<double>, x:VectorOrMatrix,mu:Vector<double>,sigma:Vector<double>) = 
+        match x with 
+        | V x -> normalize ((V x), mu, sigma)*beta
+        | M x -> normalize ((M x), mu, sigma)*beta
+
+    let logistic (x:Vector<double>) = 1.0/((-x).PointwiseExp() + 1.0)
+
     let RMSE (y:Vector<double>) (p:Vector<double>)=
         sqrt(((y-p) * (y-p))/(double y.Count))
 
@@ -29,10 +46,6 @@ module Utilities
     let getNormalizeParameter (x:Matrix<double>) =
         x.ColumnSums().Divide(double x.RowCount),x.ToColumnArrays() |> Array.map (fun col -> col.StandardDeviation() ) |> DenseVector.ofArray
 
-    let normalize (x:VectorOrMatrix,mu:Vector<double>,sd:Vector<double>) =
-        match x with
-        | V v -> (v.Add(mu.Negate())./sd).ToRowMatrix()
-        | M m -> m.ToRowArrays() |> Array.map (fun row -> ((row |> DenseVector.ofArray).Add(mu.Negate())./(sd)).ToArray() ) |> DenseMatrix.ofRowArrays
 
     let QRUpdate (x:Matrix<double>) (y:Vector<double>)=
         let qr=x.QR()
