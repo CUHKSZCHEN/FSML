@@ -20,3 +20,79 @@ A machine learning project written in F#
 ### Algorithms todo list:
   - cox ph model
   - subdistribution model
+
+# Documentation
+
+
+## 1. Linear regression
+
+We use the data /data/continuous.txt, which is stored in the libsvm format. Please note that no imputation is implemented at this time so missing values in the data file would throw exceptions.
+
+
+Basic useful feature list:
+
+ * Ctrl+S / Cmd+S to save the file
+ * Ctrl+Shift+S / Cmd+Shift+S to choose to save as Markdown or HTML
+ * Drag and drop a file into here to load it
+ * File contents are saved in the URL so you can share files
+
+
+I'm no good at writing sample / filler text, so go write something yourself.
+
+Look, a list!
+
+ * foo
+ * bar
+ * ba
+
+
+```fsharp
+open DataTypes
+open LinearRegression
+open Utilities
+[<EntryPoint>]
+let main argv = 
+    //let dat= new readData (@"/data/continuous.txt", "continuous")
+    let dat= new readData (@"/c://test.txt", "continuous")
+    let seed=1 // random seed
+    let folds=3 // split data into 3 folds
+    let datFold = new data (dat.CreateFold folds seed ,dat.Features) // prepare data
+    let fold=1 // use fold 1 for test and the others for train
+    let xTrain,yTrain= datFold.Train fold
+    // in case to train the model using all data:
+    //let xTrain,yTrain= datFold.All 
+    let xTest,yTest= datFold.Test fold
+
+    // train a standard linear regression
+    let lm= new LM(xTrain,yTrain)
+    do lm.Fit()
+    let pTrain = lm.Predict xTrain // make prediction on training data
+    let pTest = lm.Predict xTest // make prediction on testing data
+    let rmseTrain=RMSE yTrain pTrain // compute RMSE on training data
+    let rmseTest=RMSE yTest pTest // compute RMSE on testing data
+    printfn "train rmse: %A" rmseTrain
+    printfn "test  rmse: %A" rmseTest
+    printfn "beta: %A" (lm.Beta.ToArray())
+
+    // train a linear regression with L2 penalty, i.e., ridge linear regression
+    let lml2= new LMRidge(xTrain,yTrain,0.2) // lambda = 0.2 is the penalty parameter
+    do lml2.Fit()
+    let pTrainl2 = lml2.Predict xTrain // make prediction on training data
+    let pTestl2 = lml2.Predict xTest // make prediction on testing data
+    let rmseTrainl2=RMSE yTrain pTrainl2 // compute RMSE on training data
+    let rmseTestl2=RMSE yTest pTestl2 // compute RMSE on testing data
+    printfn "train rmse: %A" rmseTrainl2
+    printfn "test  rmse: %A" rmseTestl2
+    printfn "beta: %A" (lml2.Beta.ToArray())
+
+    // train a linear regression with L1 penalty, i.e., lasso linear regression
+    let lml1= new LMRidge(xTrain,yTrain,0.2) // lambda = 0.2 is the penalty parameter
+    do lml1.Fit()
+    let pTrainl1 = lml1.Predict xTrain // make prediction on training data
+    let pTestl1 = lml1.Predict xTest // make prediction on testing data
+    let rmseTrainl1=RMSE yTrain pTrainl1 // compute RMSE on training data
+    let rmseTestl1=RMSE yTest pTestl1 // compute RMSE on testing data
+    printfn "train rmse: %A" rmseTrainl1
+    printfn "test  rmse: %A" rmseTestl1
+    printfn "beta: %A" (lml1.Beta.ToArray())
+```
