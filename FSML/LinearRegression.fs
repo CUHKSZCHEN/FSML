@@ -46,7 +46,7 @@ module LinearRegression
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
 
-        override this.Family = "LM"
+        override this.Family = "Linear regression"
         override this.Penalty = "L2"
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
 
