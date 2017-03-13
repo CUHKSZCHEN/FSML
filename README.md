@@ -11,7 +11,7 @@ A machine learning project written in F#
   - Linear Regression
     * no penalty
     * Lasso (L1 penalty) via coordinate descent
-    * Ridge (L2 penalty)
+    * Ridge (L2 penalty)
   - Logistic Regression
     * no penalty
     * Lasso (L1 penalty) via coordinate descent
