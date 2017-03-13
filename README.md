@@ -21,6 +21,7 @@ A machine learning project written in F#
     * rbf(Gaussian) kernel 
 
 ### Algorithms todo list:
+  - gradient boosting machine (GBM)
   - cox ph model
   - subdistribution model
 
