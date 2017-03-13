@@ -10,12 +10,12 @@ A machine learning project written in F#
 ### Algorithms implemented:
   - Linear Regression
     * no penalty
-    * lasso (L1 penalty) via coordinate descent
-    * ridge (L2 penalty)
+    * Lasso (L1 penalty) via coordinate descent
+    * Ridge (L2 penalty)
   - Logistic Regression
     * no penalty
-    * lasso (L1 penalty) via coordinate descent
-    * ridge (L2 penalty) via iterated reweighted least square
+    * Lasso (L1 penalty) via coordinate descent
+    * Ridge (L2 penalty) via iterated reweighted least square
   - SVM via Sequential Minimal Optimization (SMO)
     * linear kernel
     * rbf(Gaussian) kernel 
