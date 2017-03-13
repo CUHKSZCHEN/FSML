@@ -4,7 +4,6 @@ module Tree
     open Utilities
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
-    open MathNet.Numerics.Random
 
     type node = {mutable nodeId:int; mutable featureId:int; mutable splitValue:double; mutable leafValue:double}
 
@@ -71,14 +70,6 @@ module Tree
 
         doSplit && (0.5*score > gamma),bestFeature,bestBreak,bestIndex,wLeft,wRight,score
 
-    let buildTree (featureIndex: int [],xValueSorted: double [][], xIndexSorted: int [][], y: double [],yTilde: double [],gTilde: double [] ref,hTilde: double [] ref, depth:int,eta:double,lambda:double,gamma:double,sub_sample:double,sub_feature:double)=
-        let ncol = featureIndex.Length
-        let nrow = y.Length
-        let rowSelected = Random.doubles nrow |> Array.map( fun e -> e <= sub_sample)
-        let colSelected = Random.doubles ncol |> Array.map( fun e -> e <= sub_feature)
-        let mutable score = 0.0
-
-        0
 
     let rec growTree (currentTree: tree<node>) (fInTree: bool []) (xInNode: bool []) (maxDepth:int) (xValueSorted: double [][]) (xIndexSorted: int [][]) (y: double []) (yTilde: double []) (gTilde: double []) (hTilde: double []) (eta:double) (lambda:double) (gamma:double)=
         let ncol = fInTree.Length
@@ -94,13 +85,13 @@ module Tree
                     let xInRightNode = xIndexSorted.[bestFeature] |> Array.mapi (fun i e -> if (xInNode.[i] && i > bestIndex) then true else false )
                     for i in [0..nrow-1] do
                         if xInLeftNode.[i] then
-                            yTilde.[i] <- wLeft
-                            let gt,ht= gh_lm y.[i] wLeft
+                            yTilde.[i] <- wLeft + yTilde.[i]
+                            let gt,ht= gh_lm y.[i] yTilde.[i]
                             gTilde.[i] <- gt 
                             hTilde.[i] <- ht
                         if xInRightNode.[i] then
-                            yTilde.[i] <- wRight
-                            let gt,ht= gh_lm y.[i] wRight
+                            yTilde.[i] <- wRight + yTilde.[i]
+                            let gt,ht= gh_lm y.[i] yTilde.[i]
                             gTilde.[i] <- gt 
                             hTilde.[i] <- ht                  
                     let currentNode = {nodeId=currentNodeId; featureId=bestFeature;splitValue=bestBreak;leafValue=0.0}
@@ -121,13 +112,13 @@ module Tree
                         let xInRightNode = xIndexSorted.[bestFeature] |> Array.mapi (fun i e -> if (xInNode.[i] && i > bestIndex) then true else false )
                         for i in [0..nrow-1] do
                             if xInLeftNode.[i] then
-                                yTilde.[i] <- wLeft
-                                let gt,ht= gh_lm y.[i] wLeft
+                                yTilde.[i] <- wLeft+yTilde.[i]
+                                let gt,ht= gh_lm y.[i] yTilde.[i]
                                 gTilde.[i] <- gt 
                                 hTilde.[i] <- ht
                             if xInRightNode.[i] then
-                                yTilde.[i] <- wRight
-                                let gt,ht= gh_lm y.[i] wRight
+                                yTilde.[i] <- wRight+yTilde.[i]
+                                let gt,ht= gh_lm y.[i] yTilde.[i]
                                 gTilde.[i] <- gt 
                                 hTilde.[i] <- ht 
                         do currentNodeId <- currentNodeId + 1
@@ -141,10 +132,4 @@ module Tree
                         TreeNode(currentNode,leftNode,rightNode)
                     else Empty
                 | _ -> Empty
-        //let rowSelected = Random.doubles nrow |> Array.map( fun e -> e <= sub_sample)
-        //let colSelected = Random.doubles ncol |> Array.map( fun e -> e <= sub_feature)
-
-
-
-
-        
+                
