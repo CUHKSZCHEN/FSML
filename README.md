@@ -117,7 +117,7 @@ let main argv =
     printfn "test  auc: %A" aucTest
     printfn "beta: %A" (lr.Beta.ToArray())
 
-    // train a logistic regression with L2 penalty, i.e., ridge linear regression
+    // train a logistic regression with L2 penalty, i.e., ridge logistic regression
     let lrl2= new LRRidge(xTrain,yTrain,0.2) // lambda = 0.2 is the penalty parameter
     do lrl2.Fit()
     let pTrainl2 = lrl2.Predict xTrain // make prediction on training data
@@ -128,7 +128,7 @@ let main argv =
     printfn "test  auc: %A" aucTestl2
     printfn "beta: %A" (lrl2.Beta.ToArray())
 
-    // train a logistic regression with L1 penalty, i.e., lasso linear regression
+    // train a logistic regression with L1 penalty, i.e., lasso logistic regression
     let lrl1= new LRLasso(xTrain,yTrain,0.2) // lambda = 0.2 is the penalty parameter
     do lrl1.Fit()
     let pTrainl1 = lrl1.Predict xTrain // make prediction on training data
