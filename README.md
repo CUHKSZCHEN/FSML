@@ -19,9 +19,10 @@ A machine learning project written in F#
   - SVM via Sequential Minimal Optimization (SMO)
     * linear kernel
     * rbf(Gaussian) kernel 
+  - gradient boosting machine (GBM)
+
 
 ### Algorithms todo list:
-  - gradient boosting machine (GBM)
   - cox ph model
   - subdistribution model
 
