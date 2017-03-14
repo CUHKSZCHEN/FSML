@@ -82,7 +82,6 @@ module Tree
         else 
             match currentTree with
             | Empty -> 
-                let lossOld = xInNode |> Array.mapi (fun i e -> if e then (y.[i]-yTilde.[i])*(y.[i]-yTilde.[i]) else 0.0) |> Array.sum
                 
                 let doSplit,bestFeature,bestBreak,bestIndex,wLeft,wRight,score = splitNode (fInTree,xInNode,xValueSorted,xIndexSorted,gTilde,hTilde,lambda,gamma)
 
@@ -109,7 +108,6 @@ module Tree
                         gTilde.[i] <- gt 
                         hTilde.[i] <- ht       
 
-                    let lossNew = xInNode |> Array.mapi (fun i e -> if e then (y.[i]-yTilde.[i])*(y.[i]-yTilde.[i]) else 0.0) |> Array.sum
                     let currentNode = {nodeId=currentNodeId; featureId=bestFeature;splitValue=bestBreak;leafValue=0.0}
                     do currentNodeId <- currentNodeId + 1
                     let mutable leftNode = TreeNode({nodeId=currentNodeId; featureId= -1;splitValue=0.0;leafValue=wLeft},Empty,Empty)
