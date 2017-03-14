@@ -5,9 +5,8 @@ module GBM
     open Tree
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
-    open MathNet.Numerics.Random
 
-    type GBM (xTrain:Matrix<double>,yTrain:Vector<double>,family:string,maxTrees:int,depth:int,eta:double,lambda:double,gamma:double,sub_sample:double,sub_feature:double)=
+    type GBM (xTrain:Matrix<double>,yTrain:Vector<double>,family:string,maxTrees:int,depth:int,eta:double,lambda:double,gamma:double,sub_sample:double,sub_feature:double, ?seed:int)=
         let x,y = xTrain,yTrain.AsArray()
         let n = y.Length
 
@@ -27,7 +26,7 @@ module GBM
         let checkSub_sample = if sub_sample <= 0.0 || sub_sample>1.0 then raiseExcetion "please choose sub_sample from 0.0 to 1.0"
         let checkSub_feature = if sub_feature <= 0.0 || sub_sample>1.0 then raiseExcetion "please choose sub_feature from 0.0 to 1.0"
 
-        let seed=1
+        let seed= defaultArg seed 1
         let rnd= System.Random(seed)
 
         let forest = Array.create maxTrees Empty
@@ -47,8 +46,8 @@ module GBM
 
         member this.Fit() =
             for i in [0..maxTrees-1] do
-                let xInNode = Random.doubles n |> Array.map( fun e -> e <= sub_sample)
-                let fInTree = Random.doubles x.ColumnCount |> Array.map( fun e -> e <= sub_feature)
+                let xInNode = Array.init n (fun _ -> rnd.NextDouble() <= sub_sample)
+                let fInTree = Array.init x.ColumnCount (fun _ -> rnd.NextDouble() <= sub_feature)
                 forest.[i] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
 
         //member this.CVFit (metric:string,?nFolds:int, ?earlyStopRounds:int)= 
