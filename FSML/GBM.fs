@@ -7,7 +7,7 @@ module GBM
     open MathNet.Numerics.LinearAlgebra
     open MathNet.Numerics.Random
 
-    type GBM (xTrain:Matrix<double>,yTrain:Vector<double>,family:string,metric:string,maxTrees:int,depth:int,eta:double,lambda:double,gamma:double,sub_sample:double,sub_feature:double)=
+    type GBM (xTrain:Matrix<double>,yTrain:Vector<double>,family:string,maxTrees:int,depth:int,eta:double,lambda:double,gamma:double,sub_sample:double,sub_feature:double)=
         let x,y = xTrain,yTrain.AsArray()
         let n = y.Length
 
@@ -17,11 +17,6 @@ module GBM
                  | "binomial" -> gh_lr
                  | _ -> raiseExcetion "Please choose either Gaussian or binomial!"
 
-        let metricFun = match metric with
-                        | "RMSE" -> RMSE
-                        | "AUC" -> AUC
-                        | "logloss" -> logloss
-                        | _ -> raiseExcetion "Please choose either RMSE, AUC or logloss"
 
         let checkDepth = if depth < 1 then raiseExcetion "the minimum depth is 1"
         let checkMaxTrees = if maxTrees < 1 then raiseExcetion "the minimum number of trees is 1"
@@ -56,10 +51,16 @@ module GBM
                 let fInTree = Random.doubles x.ColumnCount |> Array.map( fun e -> e <= sub_feature)
                 forest.[i] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
 
-        //member this.CVFit (?nFolds:int, ?earlyStopRounds:int)= 
+        //member this.CVFit (metric:string,?nFolds:int, ?earlyStopRounds:int)= 
         //    let nFolds = defaultArg nFolds 5
         //    let nRounds = defaultArg earlyStopRounds 10
         //    0
+        //let metricFun = match metric with
+        //               | "RMSE" -> RMSE
+        //                | "AUC" -> AUC
+        //                | "logloss" -> logloss
+        //                | _ -> raiseExcetion "Please choose either RMSE, AUC or logloss"
+
 
 
         member this.Predict(x:Vector<double>,?value:string) = 
