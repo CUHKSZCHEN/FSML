@@ -189,3 +189,41 @@ let main argv =
     
     0
 ```
+
+## 4. Gradient boosting machine (GBM)
+
+The current version of GBM can train either Gaussian or binomial response. In this example we train a binary classification model using the data /data/binary.txt, which is stored in the libsvm format.
+Fit with cross validation is not implemented yet.
+
+```fsharp
+open DataTypes
+open GBM
+open Utilities
+[<EntryPoint>]
+let main argv = 
+    let dat= new readData (@"/data/binary.txt", "binary")
+    let seed=1 // random seed
+    let folds=3 // split data into 3 folds
+    let datFold = new data (dat.CreateFold folds seed ,dat.Features) // prepare data
+    let fold=1 // use fold 1 for test and the others for train
+    let xTrain,yTrain= datFold.Train fold
+    // in case to train the model using all data:
+    //let xTrain,yTrain= datFold.All 
+    let xTest,yTest= datFold.Test fold
+    
+    // train a gbm model with the following parameters:
+    // number of trees: 5
+    // depth of each tree: 4
+    // learning rate: 0.2
+    // regularization parameter lambda: 0.1
+    // regularization parameter gamma: 0.0
+    // row(sample wise) subsample ratio: 0.7
+    // col(feature wise) subsample ratio 0.6
+    
+    let gbm = GBM (xTrain,yTrain,"binomial",5,4,0.2,0.1,0.0,0.7,0.6)
+    do gbm.Fit()
+    let pred = gbm.Predict (xTest ,"response")
+    printfn "AUC: %A \t logloss: %A" (AUC yTest pred) (logloss yTest pred)
+    
+    0
+```
