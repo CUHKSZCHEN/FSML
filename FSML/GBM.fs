@@ -56,7 +56,11 @@ module GBM
                 let fInTree = Random.doubles x.ColumnCount |> Array.map( fun e -> e <= sub_feature)
                 forest.[i] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
 
-        //member this.CVFit(earlyStops)=
+        //member this.CVFit (?nFolds:int, ?earlyStopRounds:int)= 
+        //    let nFolds = defaultArg nFolds 5
+        //    let nRounds = defaultArg earlyStopRounds 10
+        //    0
+
 
         member this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
