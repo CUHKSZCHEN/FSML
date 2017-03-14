@@ -30,8 +30,10 @@ module Tree
     let predictForestforMatrix forest (x:Matrix<double>)  = x.EnumerateRows() |> Seq.map (fun row -> predictForestforVector forest row) |> Array.ofSeq
 
     let gh_lm (y:double) (pred:double) = pred - y, 1.0
-    
-    let gh_lr (y:double) (pred:double)= pred - y, max (pred * (1.0 - pred)) 1e-16
+
+    let gh_lr (y:double) (pred:double) =
+        let prob= 1.0/(1.0+exp(-pred))
+        prob - y , max (prob * (1.0 - prob)) 1e-16
 
 
     let splitNode (fInTree: bool[], xInNode: bool [], xValueSorted: double [][], xIndexSorted: int [][],gTilde: double [],hTilde: double [],lambda:double,gamma:double) = 
@@ -122,4 +124,3 @@ module Tree
                 | Empty -> 
                       growTree Empty fInTree xInNode gh (maxDepth) xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
                 | _ -> Empty
-
