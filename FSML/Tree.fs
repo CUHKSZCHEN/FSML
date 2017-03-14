@@ -122,3 +122,4 @@ module Tree
                 | Empty -> 
                       growTree Empty fInTree xInNode gh (maxDepth) xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
                 | _ -> Empty
+
