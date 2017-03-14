@@ -5,6 +5,15 @@ module GLM
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
 
+    let predictMatchGLM (link:Vector<double>) (family:string) (value:string)= 
+        match value,family with
+        | "link",_ -> link
+        | "response", "gaussian" -> link
+        | "response", "Gaussian" -> link
+        | "response", "binomial" -> logistic(link)
+        | _ -> raiseExcetion "predict either link or response"
+
+
     [<AbstractClass>]
     type model()=
         abstract Family: string with get
