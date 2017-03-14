@@ -55,7 +55,8 @@ module GBM
                 let xInNode = Random.doubles n |> Array.map( fun e -> e <= sub_sample)
                 let fInTree = Random.doubles x.ColumnCount |> Array.map( fun e -> e <= sub_feature)
                 forest.[i] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
-                printfn "AUC: %A" (AUC yTrain (DenseVector.ofArray(yTilde)))
+
+        //member this.CVFit(earlyStops)=
 
         member this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
