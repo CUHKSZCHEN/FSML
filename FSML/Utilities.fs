@@ -37,7 +37,7 @@ module Utilities
     let Loglik (s:Vector<double>) (y:Vector<double>)=
         y*s - s.PointwiseExp().Add(1.0).PointwiseLog().Sum()
 
-    let logloss (p:Vector<double>) (y:Vector<double>)=
+    let logloss (y:Vector<double>) (p:Vector<double>)=
         let EPSLow=1e-15
         let EPSHigh=1.0-EPSLow 
         let pNew=p.Map (fun e -> if e<EPSLow then EPSLow else if e>EPSHigh then EPSHigh else e)
