@@ -20,6 +20,8 @@ A machine learning project written in F#
     * linear kernel
     * rbf(Gaussian) kernel 
   - Gradient Boosting Machine (GBM)
+    * Gaussian response, i.e., least square loss function
+    * Binomial response, i.e., logloss loss function
 
 
 ### Algorithms todo list:
