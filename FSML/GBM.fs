@@ -31,8 +31,8 @@ module GBM
         let rnd= System.Random(seed)
 
         let forest = Array.create maxTrees Empty
-
-        let yTilde = Array.create yTrain.Count (y |> Array.average)
+        let w0 = y |> Array.average
+        let yTilde = Array.create yTrain.Count w0
         let gTilde,hTilde = [for i in 0..(n-1) -> gh y.[i] yTilde.[i]] |> List.unzip |> fun (g,h) -> Array.ofList(g) ,Array.ofList(h)
         let xValueSorted,xIndexSorted = x.EnumerateColumns() |> Seq.map (fun col -> col.ToArray() |> Array.mapi (fun e t -> (t,e))  |> Array.sort |> Array.toList |> List.unzip |> fun(e,i)-> Array.ofList(e),Array.ofList(i) ) |> List.ofSeq |> List.unzip |> fun(e,i) -> Array.ofList(e),Array.ofList(i)
 
@@ -44,11 +44,14 @@ module GBM
             | "response", "binomial" -> logistic(link)
             | _ -> raiseExcetion "predict either link or response"      
 
+
         member this.Fit() =
             for i in [0..maxTrees-1] do
                 let xInNode = Array.init n (fun _ -> rnd.NextDouble() <= sub_sample)
                 let fInTree = Array.init x.ColumnCount (fun _ -> rnd.NextDouble() <= sub_feature)
                 forest.[i] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
+                let yt = (this.Predict xTrain )
+                printfn "Iter: %5d \t %10.15f"  i  (RMSE yTrain yt)
 
         member this.CVFit (metric:string, nTrees:int ,?nFolds:int, ?earlyStopRounds:int)=
             let nFolds = defaultArg nFolds 5
@@ -67,7 +70,10 @@ module GBM
                             | _ -> raiseExcetion "Please choose either RMSE, AUC or logloss"
 
             let yInFold = [|0..nFolds-1|] |> Array.map (fun f-> (y |> Array.indexed |> Array.filter (fun (index, _) -> foldArray.[index]=f) |> Array.map (fun (_, e) -> e)) |> DenseVector.ofArray)
-            let yHatInFold = [| for f in 0..nFolds-1 do yield (Array.create (yInFold.[f]).Count 0.0 |> DenseVector.ofArray) |]  
+            let s = Array.zip foldArray y |> Seq.ofArray |> Seq.sortBy fst 
+            let w0s = s|> Seq.groupBy fst |> Seq.toList |> List.map (fun (_,s) -> Seq.averageBy snd s ) |> Array.ofList
+
+            let yHatInFold = [| for f in 0..nFolds-1 do yield (Array.create (yInFold.[f]).Count w0s.[f] |> DenseVector.ofArray) |]  
             for i in [0..nTrees-1] do
                 for f in [0..nFolds-1] do
                     let xInNode = Array.init n (fun index -> (rnd.NextDouble() <= sub_sample) && (foldArray.[index]<>f))
@@ -85,12 +91,10 @@ module GBM
 
         member this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
-            let link = DenseVector.ofArray([|predictForestforVector forest x|])
+            let link = w0+ DenseVector.ofArray([|predictForestforVector forest x|])
             predictMatch link value
 
         member this.Predict(x:Matrix<double>,?value:string) = 
             let value = defaultArg value "link"
-            let link = DenseVector.ofArray( predictForestforMatrix forest x)
+            let link = w0 + DenseVector.ofArray( predictForestforMatrix forest x)
             predictMatch link value
-
-        
