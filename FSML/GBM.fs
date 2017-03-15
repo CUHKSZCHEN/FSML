@@ -70,18 +70,26 @@ module GBM
                             | _ -> raiseExcetion "Please choose either RMSE, AUC or logloss"
 
             let yInFold = [|0..nFolds-1|] |> Array.map (fun f-> (y |> Array.indexed |> Array.filter (fun (index, _) -> foldArray.[index]=f) |> Array.map (fun (_, e) -> e)) |> DenseVector.ofArray)
-            let s = Array.zip foldArray y |> Seq.ofArray |> Seq.sortBy fst 
-            let w0s = s|> Seq.groupBy fst |> Seq.toList |> List.map (fun (_,s) -> Seq.averageBy snd s ) |> Array.ofList
 
-            let yHatInFold = [| for f in 0..nFolds-1 do yield (Array.create (yInFold.[f]).Count w0s.[f] |> DenseVector.ofArray) |]  
+            let s = Array.zip foldArray y |> Seq.ofArray |> Seq.sortBy fst 
+            let ySum = y |> Array.sum
+            let foldSums = s|> Seq.groupBy fst |> Seq.toList |> List.map (fun (_,s) -> Seq.sumBy snd s ) |> Array.ofList |> Array.map (fun e -> ySum-e )
+            let w0s = [| for f in 0..nFolds-1 do yield foldSums.[f]/(double (y.Length - (yInFold.[f]).Count))|]
+            
+            let yHatInFold = [| for f in 0..nFolds-1 do yield (Array.create (yInFold.[f]).Count w0s.[f] |> DenseVector.ofArray) |]
+
+            let yTildeCVs = [|for f in 0..nFolds-1 do yield (foldArray |> Array.map (fun e -> if e <> f then w0s.[f] else 0.0 ))|]
+            let gTildeCVs,hTildeCVs = [| for f in 0..nFolds-1 do yield ([for i in 0..(n-1) -> gh y.[i] yTildeCVs.[f].[i]] |> List.unzip |> fun (g,h) -> Array.ofList(g) ,Array.ofList(h) )|] |> Array.unzip
+            
             for i in [0..nTrees-1] do
                 for f in [0..nFolds-1] do
                     let xInNode = Array.init n (fun index -> (rnd.NextDouble() <= sub_sample) && (foldArray.[index]<>f))
                     let fInTree = Array.init x.ColumnCount (fun _ -> rnd.NextDouble() <= sub_feature)
 
-                    cvForests.[i,f] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
+                    cvForests.[i,f] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTildeCVs.[f] gTildeCVs.[f] hTildeCVs.[f] eta lambda gamma
                     yHatInFold.[f] <- yHatInFold.[f] + this.Predict(x, cvForests.[i,f],foldArray, f) 
                     metricArray.[i,f] <- metricFun yInFold.[f] (predictMatch yHatInFold.[f] "response")
+
                 let mu= metricArray.[i,*] |> Array.average
                 let sd= sqrt((metricArray.[i,*] |> Array.map (fun e -> e*e) |> Array.average) - mu*mu)
                 printfn "Iter: %5d \t CV %s \t %10.15f \t %10.15f" i metric mu sd
