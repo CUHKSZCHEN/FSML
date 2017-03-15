@@ -26,8 +26,11 @@ module Tree
             | Empty -> head.leafValue
             | _ -> if x.[head.featureId]< head.splitValue then predictTree left x else predictTree right x
     
+
     let predictForestforVector forest (x:Vector<double>)  = forest |> Array.map (fun tree -> predictTree tree x ) |> Array.sum
     let predictForestforMatrix forest (x:Matrix<double>)  = x.EnumerateRows() |> Seq.map (fun row -> predictForestforVector forest row) |> Array.ofSeq
+
+    let predictTreeforMatrixInFold tree (x:Matrix<double>) (foldArray: int[]) (fold:int)  = x.EnumerateRowsIndexed() |> Seq.filter (fun (i,_) -> foldArray.[i]=fold) |> Seq.map (fun (_, row) -> predictTree tree row) |> Array.ofSeq
 
     let gh_lm (y:double) (pred:double) = pred - y, 1.0
 
@@ -82,6 +85,7 @@ module Tree
         else 
             match currentTree with
             | Empty -> 
+                let lossOld = xInNode |> Array.mapi (fun i e -> if e then (y.[i]-yTilde.[i])*(y.[i]-yTilde.[i]) else 0.0) |> Array.sum
                 
                 let doSplit,bestFeature,bestBreak,bestIndex,wLeft,wRight,score = splitNode (fInTree,xInNode,xValueSorted,xIndexSorted,gTilde,hTilde,lambda,gamma)
 
@@ -108,6 +112,7 @@ module Tree
                         gTilde.[i] <- gt 
                         hTilde.[i] <- ht       
 
+                    let lossNew = xInNode |> Array.mapi (fun i e -> if e then (y.[i]-yTilde.[i])*(y.[i]-yTilde.[i]) else 0.0) |> Array.sum
                     let currentNode = {nodeId=currentNodeId; featureId=bestFeature;splitValue=bestBreak;leafValue=0.0}
                     do currentNodeId <- currentNodeId + 1
                     let mutable leftNode = TreeNode({nodeId=currentNodeId; featureId= -1;splitValue=0.0;leafValue=wLeft},Empty,Empty)
@@ -122,3 +127,5 @@ module Tree
                 | Empty -> 
                       growTree Empty fInTree xInNode gh (maxDepth) xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
                 | _ -> Empty
+
+
