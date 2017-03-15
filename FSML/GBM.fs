@@ -7,7 +7,7 @@ module GBM
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
 
-    type GBM (xTrain:Matrix<double>,yTrain:Vector<double>,family:string,maxTrees:int,depth:int,eta:double,lambda:double,gamma:double,sub_sample:double,sub_feature:double, ?seed:int)=
+    type GBM (xTrain:Matrix<double>,yTrain:Vector<double>,family:string,depth:int,eta:double,lambda:double,gamma:double,sub_sample:double,sub_feature:double, ?seed:int)=
         let x,y = xTrain,yTrain.AsArray()
         let n = y.Length
 
@@ -19,7 +19,6 @@ module GBM
 
 
         let checkDepth = if depth < 1 then raiseExcetion "the minimum depth is 1"
-        let checkMaxTrees = if maxTrees < 1 then raiseExcetion "the minimum number of trees is 1"
 
         let checkEta = if eta < 0.0 then raiseExcetion "please choose a positive learning rate eta"
         let checkLambda = if lambda < 0.0 then raiseExcetion "please choose a positive lambda"
@@ -30,7 +29,7 @@ module GBM
         let seed= defaultArg seed 1
         let rnd= System.Random(seed)
 
-        let forest = Array.create maxTrees Empty
+        
         let w0 = y |> Array.average
         let yTilde = Array.create yTrain.Count w0
         let gTilde,hTilde = [for i in 0..(n-1) -> gh y.[i] yTilde.[i]] |> List.unzip |> fun (g,h) -> Array.ofList(g) ,Array.ofList(h)
@@ -43,15 +42,19 @@ module GBM
             | "response", "Gaussian" -> link
             | "response", "binomial" -> logistic(link)
             | _ -> raiseExcetion "predict either link or response"      
+        
+        member val Forest = Array.empty with get,set
 
+        member this.Fit(maxTrees:int) =
+            let checkMaxTrees = if maxTrees < 1 then raiseExcetion "the minimum number of trees is 1"
+            this.Forest <- Array.create maxTrees Empty
 
-        member this.Fit() =
             for i in [0..maxTrees-1] do
                 let xInNode = Array.init n (fun _ -> rnd.NextDouble() <= sub_sample)
                 let fInTree = Array.init x.ColumnCount (fun _ -> rnd.NextDouble() <= sub_feature)
-                forest.[i] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
-                let yt = (this.Predict xTrain )
-                printfn "Iter: %5d \t %10.15f"  i  (RMSE yTrain yt)
+                this.Forest.[i] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
+                //let yt = (this.Predict xTrain )
+                //printfn "Iter: %5d \t %10.15f"  i  (RMSE yTrain yt)
 
         member this.CVFit (metric:string, nTrees:int ,?nFolds:int, ?earlyStopRounds:int)=
             let nFolds = defaultArg nFolds 5
@@ -99,10 +102,10 @@ module GBM
 
         member this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
-            let link = w0+ DenseVector.ofArray([|predictForestforVector forest x|])
+            let link = w0+ DenseVector.ofArray([|predictForestforVector this.Forest x|])
             predictMatch link value
 
         member this.Predict(x:Matrix<double>,?value:string) = 
             let value = defaultArg value "link"
-            let link = w0 + DenseVector.ofArray( predictForestforMatrix forest x)
+            let link = w0 + DenseVector.ofArray( predictForestforMatrix this.Forest x)
             predictMatch link value
