@@ -85,10 +85,11 @@ module Tree
         else 
             match currentTree with
             | Empty -> 
-                let lossOld = xInNode |> Array.mapi (fun i e -> if e then (y.[i]-yTilde.[i])*(y.[i]-yTilde.[i]) else 0.0) |> Array.sum
                 
                 let doSplit,bestFeature,bestBreak,bestIndex,wLeft,wRight,score = splitNode (fInTree,xInNode,xValueSorted,xIndexSorted,gTilde,hTilde,lambda,gamma)
-
+                let wLeftScaled= wLeft * eta
+                let wRightScaled= wRight * eta
+                
                 if doSplit then
                     let xInLeftNode = Array.copy xInNode
                     let xInRightNode = Array.copy xInNode
@@ -105,20 +106,19 @@ module Tree
 
                     for i in [0..nrow-1] do
                         if xInLeftNode.[i] then
-                            yTilde.[i] <- (wLeft*eta + yTilde.[i])
+                            yTilde.[i] <- (wLeftScaled + yTilde.[i])
                         if xInRightNode.[i] then
-                            yTilde.[i] <- (wRight*eta + yTilde.[i])
+                            yTilde.[i] <- (wRightScaled + yTilde.[i])
                         let gt,ht= gh y.[i] yTilde.[i]
                         gTilde.[i] <- gt 
                         hTilde.[i] <- ht       
 
-                    let lossNew = xInNode |> Array.mapi (fun i e -> if e then (y.[i]-yTilde.[i])*(y.[i]-yTilde.[i]) else 0.0) |> Array.sum
                     let currentNode = {nodeId=currentNodeId; featureId=bestFeature;splitValue=bestBreak;leafValue=0.0}
                     do currentNodeId <- currentNodeId + 1
-                    let mutable leftNode = TreeNode({nodeId=currentNodeId; featureId= -1;splitValue=0.0;leafValue=wLeft},Empty,Empty)
+                    let mutable leftNode = TreeNode({nodeId=currentNodeId; featureId= -1;splitValue=0.0;leafValue=wLeftScaled},Empty,Empty)
                     leftNode <- growTree leftNode fInTree xInLeftNode gh (maxDepth-1) xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
                     do currentNodeId <- currentNodeId + 1
-                    let mutable rightNode = TreeNode({nodeId=currentNodeId;featureId= -1;splitValue=0.0;leafValue=wRight},Empty,Empty)
+                    let mutable rightNode = TreeNode({nodeId=currentNodeId;featureId= -1;splitValue=0.0;leafValue=wRightScaled},Empty,Empty)
                     rightNode <- growTree rightNode fInTree xInRightNode gh (maxDepth-1) xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
                     TreeNode(currentNode,leftNode,rightNode)
                 else Empty
