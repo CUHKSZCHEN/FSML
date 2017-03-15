@@ -3,6 +3,7 @@ module GBM
     open DataTypes
     open Utilities
     open Tree
+    open System.Threading.Tasks
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
 
@@ -41,8 +42,7 @@ module GBM
             | "response", "gaussian" -> link
             | "response", "Gaussian" -> link
             | "response", "binomial" -> logistic(link)
-            | _ -> raiseExcetion "predict either link or response"
-
+            | _ -> raiseExcetion "predict either link or response"      
 
         member this.Fit() =
             for i in [0..maxTrees-1] do
@@ -50,17 +50,38 @@ module GBM
                 let fInTree = Array.init x.ColumnCount (fun _ -> rnd.NextDouble() <= sub_feature)
                 forest.[i] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
 
-        //member this.CVFit (metric:string,?nFolds:int, ?earlyStopRounds:int)= 
-        //    let nFolds = defaultArg nFolds 5
-        //    let nRounds = defaultArg earlyStopRounds 10
-        //    0
-        //let metricFun = match metric with
-        //               | "RMSE" -> RMSE
-        //                | "AUC" -> AUC
-        //                | "logloss" -> logloss
-        //                | _ -> raiseExcetion "Please choose either RMSE, AUC or logloss"
+        member this.CVFit (metric:string, nTrees:int ,?nFolds:int, ?earlyStopRounds:int)=
+            let nFolds = defaultArg nFolds 5
+            let cvForests = Array2D.create nTrees nFolds Empty
 
+            let foldArray = Array.init n (fun _ -> rnd.Next() % nFolds )
+            let nRounds = defaultArg earlyStopRounds 10
+            let metricArray = Array2D.create nTrees nFolds 0.0
 
+            let metricFun = match metric with
+                            | "rmse" -> RMSE
+                            | "RMSE" -> RMSE
+                            | "auc" -> AUC
+                            | "AUC" -> AUC
+                            | "logloss" -> logloss
+                            | _ -> raiseExcetion "Please choose either RMSE, AUC or logloss"
+
+            let yInFold = [|0..nFolds-1|] |> Array.map (fun f-> (y |> Array.indexed |> Array.filter (fun (index, _) -> foldArray.[index]=f) |> Array.map (fun (_, e) -> e)) |> DenseVector.ofArray)
+            let yHatInFold = [| for f in 0..nFolds-1 do yield (Array.create (yInFold.[f]).Count 0.0 |> DenseVector.ofArray) |]  
+            for i in [0..nTrees-1] do
+                for f in [0..nFolds-1] do
+                    let xInNode = Array.init n (fun index -> (rnd.NextDouble() <= sub_sample) && (foldArray.[index]<>f))
+                    let fInTree = Array.init x.ColumnCount (fun _ -> rnd.NextDouble() <= sub_feature)
+
+                    cvForests.[i,f] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
+                    yHatInFold.[f] <- yHatInFold.[f] + this.Predict(x, cvForests.[i,f],foldArray, f) 
+                    metricArray.[i,f] <- metricFun yInFold.[f] (predictMatch yHatInFold.[f] "response")
+                let mu= metricArray.[i,*] |> Array.average
+                let sd= sqrt((metricArray.[i,*] |> Array.map (fun e -> e*e) |> Array.average) - mu*mu)
+                printfn "Iter: %5d \t CV %s \t %10.15f \t %10.15f" i metric mu sd
+        
+        member private this.Predict(x:Matrix<double>, oneTree: tree<node>, foldArray: int[], fold: int) = 
+            DenseVector.ofArray( predictTreeforMatrixInFold oneTree x foldArray fold)
 
         member this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
