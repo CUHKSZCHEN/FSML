@@ -15,8 +15,13 @@ module LinearRegression
 
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
 
-        override this.Fit () = 
-            this.Beta <- QRUpdate xWith1 y
+        override this.Fit (?decomposition:string) = 
+            let decomp = defaultArg decomposition "QR"
+            let updateF = match decomp with 
+                | InvariantEqual "QR" -> QRUpdate
+                | InvariantEqual "SVD" -> SVDUpdate 
+                | _ -> raiseException "select either QR or SVD"
+            this.Beta <- updateF xWith1 y
         
         override this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
@@ -57,11 +62,16 @@ module LinearRegression
             predictMatchGLM link (this.Family) value
 
 
-        override this.Fit () =
+        override this.Fit (?decomposition:string) =
+            let decomp = defaultArg decomposition "QR"
             let beta0 = y.Sum()/(double n)
             let xTilde = DenseMatrix.stack [normalizedX; DenseVector.create normalizedX.ColumnCount (sqrt(Lambda)) |> DenseMatrix.ofDiag ]
             let yTilde =  Array.concat[(y-beta0).AsArray(); Array.zeroCreate normalizedX.ColumnCount] |> DenseVector.ofArray
-            this.Beta <- Array.concat[[|beta0|]; (QRUpdate xTilde yTilde).AsArray()] |> DenseVector.ofArray
+            let updateF = match decomp with 
+                | InvariantEqual "QR" -> QRUpdate
+                | InvariantEqual "SVD" -> SVDUpdate 
+                | _ -> raiseException "select either QR or SVD"
+            this.Beta <- Array.concat[[|beta0|]; (updateF xTilde yTilde).AsArray()] |> DenseVector.ofArray
 
     type LMLasso (xTrain:Matrix<double>,yTrain:Vector<double>,lambda)=
         inherit model()
@@ -96,7 +106,7 @@ module LinearRegression
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         
-        override this.Fit() = this.Beta <- (update cyclicCoordinateDescentUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
+        override this.Fit(?decomposition:string) = this.Beta <- (update cyclicCoordinateDescentUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
         override this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
