@@ -10,7 +10,7 @@ module LinearRegression
         inherit model()
         let x,y=xTrain,yTrain
         let xWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
-        override this.Family =  "Linear regression"
+        override this.Family =  "Gaussian"
         override this.Penalty = "None"
 
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
@@ -21,18 +21,13 @@ module LinearRegression
         override this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinear(this.Beta.[1..],V x) + this.Beta.[0]
-            match value with 
-            | "link" -> link
-            | "response" -> link
-            | _ -> raiseException "predict either link or response"
+            predictMatchGLM link (this.Family) value
 
         override this.Predict(x:Matrix<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinear(this.Beta.[1..],M x) + this.Beta.[0]
-            match value with 
-            | "link" -> link
-            | "response" -> link
-            | _ -> raiseException "predict either link or response"
+            predictMatchGLM link (this.Family) value
+
  
     type LMRidge (xTrain:Matrix<double>,yTrain:Vector<double>,lambda)=
         inherit model()
@@ -46,25 +41,20 @@ module LinearRegression
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
 
-        override this.Family = "LM"
+        override this.Family = "Gaussian"
         override this.Penalty = "L2"
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
 
         override this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinearScale(this.Beta.[1..],V x,mu,sigma ) + this.Beta.[0]
-            match value with 
-            | "link" -> link
-            | "response" -> link
-            | _ -> raiseException "predict either link or response"
+            predictMatchGLM link (this.Family) value
+
 
         override this.Predict(x:Matrix<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinearScale(this.Beta.[1..], M x, mu, sigma) + this.Beta.[0]
-            match value with 
-            | "link" -> link
-            | "response" -> link
-            | _ -> raiseException "predict either link or response"
+            predictMatchGLM link (this.Family) value
 
 
         override this.Fit () =
@@ -98,7 +88,7 @@ module LinearRegression
             do printfn "Real loss: %10.15f \t penalized Loss: %10.15f" J  loss
             beta, loss
         
-        override this.Family = "Linear regression"
+        override this.Family = "Gaussian"
         override this.Penalty = "L1"
 
         member val eps = 1e-16 with get,set
@@ -111,17 +101,10 @@ module LinearRegression
         override this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinearScale(this.Beta.[1..],V x,mu,sigma ) + this.Beta.[0]
-            match value with 
-            | "link" -> link
-            | "response" -> link
-            | _ -> raiseException "predict either link or response"
+            predictMatchGLM link (this.Family) value
+
 
         override this.Predict(x:Matrix<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinearScale(this.Beta.[1..],M x,mu,sigma ) + this.Beta.[0]
-            match value with 
-            | "link" -> link
-            | "response" -> link
-            | _ -> raiseException "predict either link or response"
-
-   
+            predictMatchGLM link (this.Family) value
