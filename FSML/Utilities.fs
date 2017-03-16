@@ -4,6 +4,10 @@ module Utilities
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
     open DataTypes
+    open System
+    
+    let (|InvariantEqual|_|) (str:string) arg =
+        if String.Compare(str,arg,StringComparison.OrdinalIgnoreCase) =0 then Some() else None
 
     let predictWith1 (beta:Vector<double>, xWith1:Matrix<double>)= xWith1 * beta
 
