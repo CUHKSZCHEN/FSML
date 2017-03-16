@@ -26,8 +26,8 @@ A machine learning project written in F#
 
 
 ### Algorithms todo list:
-  - cox ph model
-  - subdistribution model
+  - survival models
+  - neural network
 
 ## Examples
 
