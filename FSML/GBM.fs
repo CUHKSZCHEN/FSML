@@ -38,11 +38,10 @@ module GBM
         let predictMatch (link:Vector<double>) (value:string)= 
             match value,family with
             | "link",_ -> link
-            | "response", "gaussian" -> link
-            | "response", "Gaussian" -> link
-            | "response", "binomial" -> logistic(link)
-            | _ -> raiseExcetion "predict either link or response"      
-        
+            | "response", InvariantEqual "gaussian" -> link
+            | "response", InvariantEqual "binomial" -> logistic(link)
+            | _ -> raiseException "predict either link or response"      
+               
         member val Forest = Array.empty with get,set
 
         member this.Fit(maxTrees:int) =
@@ -76,12 +75,10 @@ module GBM
             let metricArray = Array2D.create nTrees nFolds 0.0
 
             let metricFun = match metric with
-                            | "rmse" -> RMSE
-                            | "RMSE" -> RMSE
-                            | "auc" -> AUC
-                            | "AUC" -> AUC
-                            | "logloss" -> logloss
-                            | _ -> raiseExcetion "Please choose either RMSE, AUC or logloss"
+                            | InvariantEqual "RMSE" -> RMSE
+                            | InvariantEqual "AUC" -> AUC
+                            | InvariantEqual "logloss" -> logloss
+                            | _ -> raiseException "Please choose either RMSE, AUC or logloss"
 
             let yInFold = [|0..nFolds-1|] |> Array.map (fun f-> (y |> Array.indexed |> Array.filter (fun (index, _) -> foldArray.[index]=f) |> Array.map (fun (_, e) -> e)) |> DenseVector.ofArray)
 
