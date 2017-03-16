@@ -50,6 +50,7 @@ module Tree
         let g = xInNode |> Array.mapi (fun i e -> if e then gTilde.[i] else 0.0) |> Array.sum
         let h = xInNode |> Array.mapi (fun i e -> if e then hTilde.[i] else 0.0) |> Array.sum
 
+        let refScore = (g*g)/(h+lambda)
 
         for k in [0..ncol-1] do
             if fInTree.[k] then
@@ -63,7 +64,7 @@ module Tree
                         gRight <- g - gLeft
                         hLeft <- hLeft + hTilde.[index]
                         hRight <- h - hLeft
-                        let scoreNew = (gLeft * gLeft)/(hLeft+lambda) + (gRight*gRight)/(hRight+lambda) - (g*g)/(h+lambda)
+                        let scoreNew = (gLeft * gLeft)/(hLeft+lambda) + (gRight*gRight)/(hRight+lambda) - refScore
 
                         if scoreNew > score then
                             doSplit <- true
@@ -104,7 +105,6 @@ module Tree
                                 wTilde.[index] <- wRightScaled
                                 xInLeftNode.[index] <- false
                                    
-
                     let currentNode = {nodeId=nodeId.[0]; featureId=bestFeature;splitValue=bestBreak;leafValue=0.0;isLeaf=false}
                     nodeId.[0] <- nodeId.[0]+1
                     let mutable leftTree = TreeNode({nodeId=nodeId.[0]; featureId= -1;splitValue=0.0;leafValue=wLeftScaled;isLeaf=true},Empty,Empty)
@@ -112,9 +112,8 @@ module Tree
 
                     nodeId.[0] <- nodeId.[0]+1
                     let mutable rightTree = TreeNode({nodeId=nodeId.[0];featureId= -1;splitValue=0.0;leafValue=wRightScaled;isLeaf=true},Empty,Empty)
-
-
                     rightTree <- growTree rightTree nodeId fInTree xInRightNode (maxDepth-1) xValueSorted xIndexSorted y wTilde gTilde hTilde eta lambda gamma
+
                     TreeNode(currentNode,leftTree,rightTree)
                 else Empty
             | TreeNode(head,left,right) ->
@@ -124,4 +123,4 @@ module Tree
                     match newNode with
                     | Empty -> currentTree
                     | _ -> newNode
-                | _ -> currentTree
+                | _ -> raiseException "try to split a node which is not a leaf"
