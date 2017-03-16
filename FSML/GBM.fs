@@ -50,23 +50,93 @@ module GBM
             let wTilde = Array.create yTrain.Count 0.0
 
             for i in [0..maxTrees-1] do
-                printfn "tree %A" i
+                //printfn "tree %A" i
                 let nodeId = [|0|]
 
                 let xInNode = Array.init n (fun _ -> rnd.NextDouble() <= sub_sample)
                 let fInTree = Array.init x.ColumnCount (fun _ -> rnd.NextDouble() <= sub_feature)
                 this.Forest.[i] <- growTree Empty nodeId fInTree xInNode depth xValueSorted xIndexSorted y wTilde gTilde hTilde eta lambda gamma
                 for j in [0..n-1] do
-                    yTilde.[j] <- yTilde.[j] + wTilde.[j]
+                    if xInNode.[j] then
+                        yTilde.[j] <- yTilde.[j] + wTilde.[j]
+                    else yTilde.[j] <- yTilde.[j] + predictTree this.Forest.[i] (x.Row(j))
                     let gt,ht= gh y.[j] yTilde.[j]
                     gTilde.[j] <- gt 
                     hTilde.[j] <- ht 
-                let yt:Vector<double> = (this.Predict xTrain )
-                let delta:Vector<double>= (yt- DenseVector.ofArray(yTilde))
-                printfn "delta %A \t %A" (delta.AbsoluteMaximum()) (delta.AbsoluteMaximumIndex())
-                printfn "Iter: %5d \t %10.15f"  i  (RMSE yTrain (DenseVector.ofArray(yTilde)))
+                //let yt:Vector<double> = (this.Predict xTrain )
+                //let delta:Vector<double>= (yt- DenseVector.ofArray(yTilde))
+                //printfn "delta %A \t %A" (delta.AbsoluteMaximum()) (delta.AbsoluteMaximumIndex())
+                //printfn "Iter: %5d \t %10.15f"  i  (AUC yTrain (DenseVector.ofArray(yTilde)))
 
         member this.CVFit (metric:string, nTrees:int ,?nFolds:int, ?earlyStopRounds:int)=
+            let nFolds = defaultArg nFolds 5
+            let cvForests = Array2D.create nTrees nFolds Empty
+
+            let foldArray = Array.init n (fun _ -> rnd.Next() % nFolds )
+            let nRounds = defaultArg earlyStopRounds 10
+            let metricArray = Array2D.create nTrees nFolds 0.0
+
+            let metricFun = match metric with
+                            | InvariantEqual "RMSE" -> RMSE
+                            | InvariantEqual "AUC" -> AUC
+                            | InvariantEqual "logloss" -> logloss
+                            | _ -> raiseException "Please choose either RMSE, AUC or logloss"
+
+            let yInFold = [|0..nFolds-1|] |> Array.map (fun f-> (y |> Array.indexed |> Array.filter (fun (index, _) -> foldArray.[index]=f) |> Array.map (fun (_, e) -> e)) |> DenseVector.ofArray)
+
+            let s = Array.zip foldArray y |> Seq.ofArray |> Seq.sortBy fst 
+            let ySum = y |> Array.sum
+            let foldSums = s|> Seq.groupBy fst |> Seq.toList |> List.map (fun (_,s) -> Seq.sumBy snd s ) |> Array.ofList |> Array.map (fun e -> ySum-e )
+            let w0s = [| for f in 0..nFolds-1 do yield foldSums.[f]/(double (y.Length - (yInFold.[f]).Count))|]
+            
+            let yHatInFold = [| for f in 0..nFolds-1 do yield (Array.create (yInFold.[f]).Count w0s.[f] |> DenseVector.ofArray) |]
+
+            let wTildeCVs = [| for f in 0..nFolds-1 do yield (Array.create yTrain.Count 0.0)|]
+            let yTildeCVs = [|for f in 0..nFolds-1 do yield (foldArray |> Array.map (fun e -> if e <> f then w0s.[f] else 0.0 ))|]
+            let gTildeCVs,hTildeCVs = [| for f in 0..nFolds-1 do yield ([for i in 0..(n-1) -> gh y.[i] yTildeCVs.[f].[i]] |> List.unzip |> fun (g,h) -> Array.ofList(g) ,Array.ofList(h) )|] |> Array.unzip
+            
+            for i in [0..nTrees-1] do
+                for f in [0..nFolds-1] do
+                    let nodeId = [|0|]
+                    let xInNode = Array.init n (fun index -> (rnd.NextDouble() <= sub_sample) && (foldArray.[index]<>f))
+                    let fInTree = Array.init x.ColumnCount (fun _ -> rnd.NextDouble() <= sub_feature)
+                    cvForests.[i,f] <- growTree Empty nodeId fInTree xInNode depth xValueSorted xIndexSorted y wTildeCVs.[f] gTildeCVs.[f] hTildeCVs.[f] eta lambda gamma
+
+                    for j in [0..n-1] do
+                        if foldArray.[j] <>f then
+                            if xInNode.[j] then
+                                yTildeCVs.[f].[j] <- yTildeCVs.[f].[j] + wTildeCVs.[f].[j]
+                            else yTildeCVs.[f].[j] <- yTildeCVs.[f].[j] + predictTree cvForests.[i,f] (x.Row(j))
+                            let gt,ht= gh y.[j] yTildeCVs.[f].[j]
+                            gTildeCVs.[f].[j] <- gt 
+                            hTildeCVs.[f].[j] <- ht 
+                    
+                    yHatInFold.[f] <- yHatInFold.[f] + this.Predict(x, cvForests.[i,f],foldArray, f) 
+                    metricArray.[i,f] <- metricFun yInFold.[f] (predictMatch yHatInFold.[f] "response")
+
+                    //let yt:Vector<double> = (this.Predict xTrain )
+                    //let delta:Vector<double>= (yt- DenseVector.ofArray(yTilde))
+                    //printfn "delta %A \t %A" (delta.AbsoluteMaximum()) (delta.AbsoluteMaximumIndex())
+                    //printfn "Iter: %5d \t %10.15f"  i  (RMSE yTrain (DenseVector.ofArray(yTilde)))
+
+                let mu= metricArray.[i,*] |> Array.average
+                let sd= sqrt((metricArray.[i,*] |> Array.map (fun e -> e*e) |> Array.average) - mu*mu)
+                printfn "Iter: %5d \t CV %s \t %10.15f \t %10.15f" i metric mu sd
+        
+        member private this.Predict(x:Matrix<double>, oneTree: tree<node>, foldArray: int[], fold: int) = 
+            DenseVector.ofArray( predictTreeforMatrixInFold oneTree x foldArray fold)
+
+        member this.Predict(x:Vector<double>,?value:string) = 
+            let value = defaultArg value "link"
+            let link = w0+ DenseVector.ofArray([|predictForestforVector this.Forest x|])
+            predictMatch link value
+
+        member this.Predict(x:Matrix<double>,?value:string) = 
+            let value = defaultArg value "link"
+            let link = w0 + DenseVector.ofArray( predictForestforMatrix this.Forest x)
+            predictMatch link value
+
+        member this.CVFit1 (metric:string, nTrees:int ,?nFolds:int, ?earlyStopRounds:int)=
             let nFolds = defaultArg nFolds 5
             let cvForests = Array2D.create nTrees nFolds Empty
 
@@ -118,16 +188,3 @@ module GBM
                 let mu= metricArray.[i,*] |> Array.average
                 let sd= sqrt((metricArray.[i,*] |> Array.map (fun e -> e*e) |> Array.average) - mu*mu)
                 printfn "Iter: %5d \t CV %s \t %10.15f \t %10.15f" i metric mu sd
-        
-        member private this.Predict(x:Matrix<double>, oneTree: tree<node>, foldArray: int[], fold: int) = 
-            DenseVector.ofArray( predictTreeforMatrixInFold oneTree x foldArray fold)
-
-        member this.Predict(x:Vector<double>,?value:string) = 
-            let value = defaultArg value "link"
-            let link = w0+ DenseVector.ofArray([|predictForestforVector this.Forest x|])
-            predictMatch link value
-
-        member this.Predict(x:Matrix<double>,?value:string) = 
-            let value = defaultArg value "link"
-            let link = w0 + DenseVector.ofArray( predictForestforMatrix this.Forest x)
-            predictMatch link value
