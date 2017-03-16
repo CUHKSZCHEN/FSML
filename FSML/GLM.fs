@@ -11,7 +11,7 @@ module GLM
         | "response", "gaussian" -> link
         | "response", "Gaussian" -> link
         | "response", "binomial" -> logistic(link)
-        | _ -> raiseExcetion "predict either link or response"
+        | _ -> raiseException "predict either link or response"
 
 
     [<AbstractClass>]
