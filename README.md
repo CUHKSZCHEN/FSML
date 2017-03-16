@@ -36,6 +36,7 @@ A machine learning project written in F#
 
 We use the data /data/continuous.txt, which is stored in the libsvm format. Please note that no imputation is implemented at this time so missing values in the data file would throw exceptions.
 
+If the calculation fails, set the decomposition parameter in Fit() to 'svd' may help. 
 
 ```fsharp
 open DataTypes
@@ -92,6 +93,7 @@ let main argv =
 ### 2. Logistic regression
 
 We use the data /data/binary.txt, which is stored in the libsvm format.
+If the calculation fails, set the decomposition parameter in Fit() to 'svd' may help. 
 
 
 ```fsharp
