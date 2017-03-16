@@ -5,7 +5,7 @@ module Tree
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
 
-    type node = {mutable nodeId:int; mutable featureId:int; mutable splitValue:double; mutable leafValue:double}
+    type node = {mutable nodeId:int; mutable featureId:int; mutable splitValue:double; mutable leafValue:double; mutable isLeaf:bool}
 
     type tree<'node>  =
         | Empty
@@ -22,8 +22,8 @@ module Tree
         match tree, x with
         | Empty,_ -> 0.0
         | TreeNode(head,left,right),_ ->
-            match left with
-            | Empty -> head.leafValue
+            match head.isLeaf with
+            | true -> head.leafValue
             | _ -> if x.[head.featureId]<= head.splitValue then predictTree left x else predictTree right x
     
 
@@ -77,19 +77,17 @@ module Tree
         doSplit && (0.5*score > gamma),bestFeature,bestBreak,bestIndex,wLeft,wRight,score
 
 
-    let rec growTree (currentTree: tree<node>) (fInTree: bool []) (xInNode: bool []) (gh: double -> double -> double*float) (maxDepth:int) (xValueSorted: double [][]) (xIndexSorted: int [][]) (y: double []) (yTilde: double []) (gTilde: double []) (hTilde: double []) (eta:double) (lambda:double) (gamma:double)=
+    let rec growTree (currentTree: tree<node>) (nodeId: int []) (fInTree: bool []) (xInNode: bool [])  (maxDepth:int) (xValueSorted: double [][]) (xIndexSorted: int [][]) (y: double []) (wTilde: double []) (gTilde: double []) (hTilde: double []) (eta:double) (lambda:double) (gamma:double)=
         let ncol = fInTree.Length
         let nrow = y.Length
-        let mutable currentNodeId = 0
         if maxDepth = 0 then currentTree
         else 
             match currentTree with
             | Empty -> 
-                
+
                 let doSplit,bestFeature,bestBreak,bestIndex,wLeft,wRight,score = splitNode (fInTree,xInNode,xValueSorted,xIndexSorted,gTilde,hTilde,lambda,gamma)
                 let wLeftScaled= wLeft * eta
                 let wRightScaled= wRight * eta
-                
                 if doSplit then
                     let xInLeftNode = Array.copy xInNode
                     let xInRightNode = Array.copy xInNode
@@ -99,33 +97,31 @@ module Tree
                         if xInNode.[index] then
                             if i <= bestIndex then 
                                 xInLeftNode.[index] <- true
+                                wTilde.[index] <- wLeftScaled
                                 xInRightNode.[index] <- false
                             else 
                                 xInRightNode.[index] <- true
+                                wTilde.[index] <- wRightScaled
                                 xInLeftNode.[index] <- false
+                                   
 
-                    for i in [0..nrow-1] do
-                        if xInLeftNode.[i] then
-                            yTilde.[i] <- (wLeftScaled + yTilde.[i])
-                        if xInRightNode.[i] then
-                            yTilde.[i] <- (wRightScaled + yTilde.[i])
-                        let gt,ht= gh y.[i] yTilde.[i]
-                        gTilde.[i] <- gt 
-                        hTilde.[i] <- ht       
+                    let currentNode = {nodeId=nodeId.[0]; featureId=bestFeature;splitValue=bestBreak;leafValue=0.0;isLeaf=false}
+                    nodeId.[0] <- nodeId.[0]+1
+                    let mutable leftTree = TreeNode({nodeId=nodeId.[0]; featureId= -1;splitValue=0.0;leafValue=wLeftScaled;isLeaf=true},Empty,Empty)
+                    leftTree <- growTree leftTree nodeId fInTree xInLeftNode (maxDepth-1) xValueSorted xIndexSorted y wTilde gTilde hTilde eta lambda gamma
 
-                    let currentNode = {nodeId=currentNodeId; featureId=bestFeature;splitValue=bestBreak;leafValue=0.0}
-                    do currentNodeId <- currentNodeId + 1
-                    let mutable leftNode = TreeNode({nodeId=currentNodeId; featureId= -1;splitValue=0.0;leafValue=wLeftScaled},Empty,Empty)
-                    leftNode <- growTree leftNode fInTree xInLeftNode gh (maxDepth-1) xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
-                    do currentNodeId <- currentNodeId + 1
-                    let mutable rightNode = TreeNode({nodeId=currentNodeId;featureId= -1;splitValue=0.0;leafValue=wRightScaled},Empty,Empty)
-                    rightNode <- growTree rightNode fInTree xInRightNode gh (maxDepth-1) xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
-                    TreeNode(currentNode,leftNode,rightNode)
+                    nodeId.[0] <- nodeId.[0]+1
+                    let mutable rightTree = TreeNode({nodeId=nodeId.[0];featureId= -1;splitValue=0.0;leafValue=wRightScaled;isLeaf=true},Empty,Empty)
+
+
+                    rightTree <- growTree rightTree nodeId fInTree xInRightNode (maxDepth-1) xValueSorted xIndexSorted y wTilde gTilde hTilde eta lambda gamma
+                    TreeNode(currentNode,leftTree,rightTree)
                 else Empty
             | TreeNode(head,left,right) ->
-                match left with
-                | Empty -> 
-                      growTree Empty fInTree xInNode gh (maxDepth) xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
-                | _ -> Empty
-
-
+                match head.isLeaf with
+                | true -> 
+                    let newNode = growTree Empty nodeId fInTree xInNode maxDepth xValueSorted xIndexSorted y wTilde gTilde hTilde eta lambda gamma
+                    match newNode with
+                    | Empty -> currentTree
+                    | _ -> newNode
+                | _ -> currentTree
