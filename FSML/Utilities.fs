@@ -58,7 +58,7 @@ module Utilities
     let SVDUpdate (x:Matrix<double>) (y:Vector<double>)=
         let svd=x.Svd()
         let D= svd.W
-        let W = DiagonalMatrix.ofDiagArray2 D.RowCount D.ColumnCount  (D.Diagonal().ToArray() |> Array.map (fun e -> if e=0.0 then 0.0 else 1.0/e) )
+        let W = DiagonalMatrix.ofDiagArray2 D.RowCount D.ColumnCount  (D.Diagonal().ToArray() |> Array.map (fun e -> if e < 1e-9 then 0.0 else 1.0/e) )
         svd.VT.Transpose() * W.Transpose() * svd.U.Transpose() *y
 
     let WeightedQRUpdate (x:Matrix<double>) (y:Vector<double>) (w:Vector<double>)=
