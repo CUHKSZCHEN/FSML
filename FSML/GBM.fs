@@ -12,10 +12,9 @@ module GBM
         let n = y.Length
 
         let gh = match family with
-                 | "gaussian" -> gh_lm
-                 | "Gaussian" -> gh_lm
-                 | "binomial" -> gh_lr
-                 | _ -> raiseExcetion "Please choose either Gaussian or binomial!"
+                 | InvariantEqual "Gaussian" -> gh_lm
+                 | InvariantEqual "binomial" -> gh_lr
+                 | _ -> raiseException "Please choose either Gaussian or binomial!"
 
 
         let checkDepth = if depth < 1 then raiseExcetion "the minimum depth is 1"
