@@ -117,7 +117,7 @@ module LogisticRegression
         let n= y.Count
         let Lambda=lambda 
         let EPS = 1e-6
-        let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
+        let checkLambda = if Lambda < 0.0 then raiseException "lambda should be positive"
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
         let normalizedXwith1= normalizedX.InsertColumn(0, DenseVector.create x.RowCount 1.0)
