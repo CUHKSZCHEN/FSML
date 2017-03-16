@@ -21,8 +21,8 @@ module SVM
         let linearKernel (i,j)= innerProduct.[i,j]
         let rbfKernel (i,j) = exp (-(innerProduct.[i,i]+innerProduct.[j,j]-2.0*innerProduct.[i,j])/2.0/var)
         let KernelFunc = match K with
-                            |"linear" -> linearKernel
-                            |"rbf" -> rbfKernel
+                            | InvariantEqual "linear" -> linearKernel
+                            | InvariantEqual "rbf" -> rbfKernel
                             |_ -> raiseException "please choose either linear or rbf kernel"
         
         let KernelMatrix = DenseMatrix.create n n 0.0
