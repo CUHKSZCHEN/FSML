@@ -17,13 +17,13 @@ module GBM
                  | _ -> raiseException "Please choose either Gaussian or binomial!"
 
 
-        let checkDepth = if depth < 1 then raiseExcetion "the minimum depth is 1"
+        let checkDepth = if depth < 1 then raiseException "the minimum depth is 1"
 
-        let checkEta = if eta < 0.0 then raiseExcetion "please choose a positive learning rate eta"
-        let checkLambda = if lambda < 0.0 then raiseExcetion "please choose a positive lambda"
-        let checkGamma = if gamma < 0.0 then raiseExcetion "please choose a positive gamm"
-        let checkSub_sample = if sub_sample <= 0.0 || sub_sample>1.0 then raiseExcetion "please choose sub_sample from 0.0 to 1.0"
-        let checkSub_feature = if sub_feature <= 0.0 || sub_sample>1.0 then raiseExcetion "please choose sub_feature from 0.0 to 1.0"
+        let checkEta = if eta < 0.0 then raiseException "please choose a positive learning rate eta"
+        let checkLambda = if lambda < 0.0 then raiseException "please choose a positive lambda"
+        let checkGamma = if gamma < 0.0 then raiseException "please choose a positive gamm"
+        let checkSub_sample = if sub_sample <= 0.0 || sub_sample>1.0 then raiseException "please choose sub_sample from 0.0 to 1.0"
+        let checkSub_feature = if sub_feature <= 0.0 || sub_sample>1.0 then raiseException "please choose sub_feature from 0.0 to 1.0"
 
         let seed= defaultArg seed 1
         let rnd= System.Random(seed)
@@ -45,7 +45,7 @@ module GBM
         member val Forest = Array.empty with get,set
 
         member this.Fit(maxTrees:int) =
-            let checkMaxTrees = if maxTrees < 1 then raiseExcetion "the minimum number of trees is 1"
+            let checkMaxTrees = if maxTrees < 1 then raiseException "the minimum number of trees is 1"
             this.Forest <- Array.create maxTrees Empty
             let wTilde = Array.create yTrain.Count 0.0
 
