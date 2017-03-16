@@ -11,15 +11,18 @@ module LogisticRegression
         let x,y=xTrain,yTrain
         let xWith1= x.InsertColumn(0, DenseVector.create x.RowCount 1.0)
         
-        let reWeightedUpdate (beta:Vector<double>)  =
+        let reWeightedUpdate (beta:Vector<double>) updateF =
             let s = predictWith1 (beta, xWith1)
             let p = (s).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
             let loglik= Loglik s y
             do loglik |> printfn "Loglikelihood: %10.15f"          
             let w= p .* (1.0 - p)
             let z= xWith1 * beta +  DiagonalMatrix.ofDiag(1.0/w) *  (y-p)
-            WeightedQRUpdate xWith1 z w, -loglik
+            updateF xWith1 z w, -loglik
         
+        let reWeightedQRUpdate (beta:Vector<double>)  = reWeightedUpdate beta WeightedQRUpdate
+        let reWeightedSVDUpdate (beta:Vector<double>)  = reWeightedUpdate beta WeightedSVDUpdate
+
                 
         override this.Family = "binomial"
         override this.Penalty = "None"
@@ -48,7 +51,13 @@ module LogisticRegression
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
 
-        override this.Fit () = this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
+        override this.Fit (?decomposition:string) = 
+            let decomp = defaultArg decomposition "QR"
+            let updateF = match decomp with 
+                | InvariantEqual "QR" -> reWeightedQRUpdate
+                | InvariantEqual "SVD" -> reWeightedSVDUpdate 
+                | _ -> raiseException "select either QR or SVD"
+            this.Beta <- (update updateF this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
      type LRRidge (xTrain:Matrix<double>,yTrain:Vector<double>,lambda)=
         inherit model()
@@ -61,7 +70,7 @@ module LogisticRegression
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
         let normalizedXwith1= normalizedX.InsertColumn(0, DenseVector.create x.RowCount 1.0)
-        let reWeightedUpdate (beta:Vector<double>) =
+        let reWeightedUpdate (beta:Vector<double>) (updateF: Matrix<double> -> Vector<double> -> Vector<double> -> Vector<double>) =
 
             let eta = predictWith1 (beta, normalizedXwith1)
             let p = (eta ).Negate().PointwiseExp().Add(1.0).DivideByThis(1.0)
@@ -75,7 +84,7 @@ module LogisticRegression
             let z = eta + (y - pTilde)./wNew
             let zTilde = Array.concat[(z).AsArray(); Array.zeroCreate normalizedXwith1.ColumnCount] |> DenseVector.ofArray
 
-            let beta_new =  (WeightedQRUpdate xTilde zTilde wTilde).ToArray() |> DenseVector.ofArray
+            let beta_new =  (updateF xTilde zTilde wTilde).ToArray() |> DenseVector.ofArray
 
             let eta_new = predictWith1 (beta_new, normalizedXwith1)
             let loglik_new = Loglik eta_new y
@@ -83,14 +92,22 @@ module LogisticRegression
             do printfn "Real Loglikelihood: %10.15f \t loss: %10.15f" (loglik_new) loss_new
             beta_new, loss_new            
         
+        let reWeightedQRUpdate (beta:Vector<double>)  = reWeightedUpdate beta WeightedQRUpdate
+        let reWeightedSVDUpdate (beta:Vector<double>)  = reWeightedUpdate beta WeightedSVDUpdate
+
         member val eps = 1e-16 with get,set
         member val maxIter = 1000 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         override this.Family = "binomial"
         override this.Penalty = "L2"
-        override this.Fit () = 
-            this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
+        override this.Fit (?decomposition:string) = 
+            let decomp = defaultArg decomposition "QR"
+            let updateF = match decomp with 
+                | InvariantEqual "QR" -> reWeightedQRUpdate
+                | InvariantEqual "SVD" -> reWeightedSVDUpdate 
+                | _ -> raiseException "select either QR or SVD"
+            this.Beta <- (update updateF this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
         member this.Predict (x:Vector<double>) = 
             this.Beta.[0] + predictWith1 (this.Beta.[1..], normalize ((V x), mu, sigma))
@@ -159,14 +176,13 @@ module LogisticRegression
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
         
-        override this.Fit () = 
+        override this.Fit (?decomposition:string) = 
             this.Beta <- (update cyclicCoordinateDescentUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
 
         override this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinearScale(this.Beta.[1..],V x,mu,sigma ) + this.Beta.[0] 
             predictMatchGLM link (this.Family) value
-
 
         override this.Predict(x:Matrix<double>,?value:string) = 
             let value = defaultArg value "link"
