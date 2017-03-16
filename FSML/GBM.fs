@@ -32,6 +32,7 @@ module GBM
         
         let w0 = y |> Array.average
         let yTilde = Array.create yTrain.Count w0
+
         let gTilde,hTilde = [for i in 0..(n-1) -> gh y.[i] yTilde.[i]] |> List.unzip |> fun (g,h) -> Array.ofList(g) ,Array.ofList(h)
         let xValueSorted,xIndexSorted = x.EnumerateColumns() |> Seq.map (fun col -> col.ToArray() |> Array.mapi (fun e t -> (t,e))  |> Array.sort |> Array.toList |> List.unzip |> fun(e,i)-> Array.ofList(e),Array.ofList(i) ) |> List.ofSeq |> List.unzip |> fun(e,i) -> Array.ofList(e),Array.ofList(i)
 
@@ -48,13 +49,24 @@ module GBM
         member this.Fit(maxTrees:int) =
             let checkMaxTrees = if maxTrees < 1 then raiseExcetion "the minimum number of trees is 1"
             this.Forest <- Array.create maxTrees Empty
+            let wTilde = Array.create yTrain.Count 0.0
 
             for i in [0..maxTrees-1] do
+                printfn "tree %A" i
+                let nodeId = [|0|]
+
                 let xInNode = Array.init n (fun _ -> rnd.NextDouble() <= sub_sample)
                 let fInTree = Array.init x.ColumnCount (fun _ -> rnd.NextDouble() <= sub_feature)
-                this.Forest.[i] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTilde gTilde hTilde eta lambda gamma
-                //let yt = (this.Predict xTrain )
-                //printfn "Iter: %5d \t %10.15f"  i  (RMSE yTrain yt)
+                this.Forest.[i] <- growTree Empty nodeId fInTree xInNode depth xValueSorted xIndexSorted y wTilde gTilde hTilde eta lambda gamma
+                for j in [0..n-1] do
+                    yTilde.[j] <- yTilde.[j] + wTilde.[j]
+                    let gt,ht= gh y.[j] yTilde.[j]
+                    gTilde.[j] <- gt 
+                    hTilde.[j] <- ht 
+                let yt:Vector<double> = (this.Predict xTrain )
+                let delta:Vector<double>= (yt- DenseVector.ofArray(yTilde))
+                printfn "delta %A \t %A" (delta.AbsoluteMaximum()) (delta.AbsoluteMaximumIndex())
+                printfn "Iter: %5d \t %10.15f"  i  (RMSE yTrain (DenseVector.ofArray(yTilde)))
 
         member this.CVFit (metric:string, nTrees:int ,?nFolds:int, ?earlyStopRounds:int)=
             let nFolds = defaultArg nFolds 5
@@ -81,17 +93,31 @@ module GBM
             
             let yHatInFold = [| for f in 0..nFolds-1 do yield (Array.create (yInFold.[f]).Count w0s.[f] |> DenseVector.ofArray) |]
 
+            let wTildeCVs = [| for f in 0..nFolds-1 do yield (Array.create yTrain.Count 0.0)|]
             let yTildeCVs = [|for f in 0..nFolds-1 do yield (foldArray |> Array.map (fun e -> if e <> f then w0s.[f] else 0.0 ))|]
             let gTildeCVs,hTildeCVs = [| for f in 0..nFolds-1 do yield ([for i in 0..(n-1) -> gh y.[i] yTildeCVs.[f].[i]] |> List.unzip |> fun (g,h) -> Array.ofList(g) ,Array.ofList(h) )|] |> Array.unzip
             
             for i in [0..nTrees-1] do
                 for f in [0..nFolds-1] do
+                    let nodeId = [|0|]
                     let xInNode = Array.init n (fun index -> (rnd.NextDouble() <= sub_sample) && (foldArray.[index]<>f))
                     let fInTree = Array.init x.ColumnCount (fun _ -> rnd.NextDouble() <= sub_feature)
+                    cvForests.[i,f] <- growTree Empty nodeId fInTree xInNode depth xValueSorted xIndexSorted y wTildeCVs.[f] gTildeCVs.[f] hTildeCVs.[f] eta lambda gamma
 
-                    cvForests.[i,f] <- growTree Empty fInTree xInNode gh depth xValueSorted xIndexSorted y yTildeCVs.[f] gTildeCVs.[f] hTildeCVs.[f] eta lambda gamma
+                    for j in [0..n-1] do
+                        if foldArray.[j] <>f then
+                            yTildeCVs.[f].[j] <- yTildeCVs.[f].[j] + wTildeCVs.[f].[j]
+                            let gt,ht= gh y.[j] yTildeCVs.[f].[j]
+                            gTildeCVs.[f].[j] <- gt 
+                            hTildeCVs.[f].[j] <- ht 
+                    
                     yHatInFold.[f] <- yHatInFold.[f] + this.Predict(x, cvForests.[i,f],foldArray, f) 
                     metricArray.[i,f] <- metricFun yInFold.[f] (predictMatch yHatInFold.[f] "response")
+
+                    //let yt:Vector<double> = (this.Predict xTrain )
+                    //let delta:Vector<double>= (yt- DenseVector.ofArray(yTilde))
+                    //printfn "delta %A \t %A" (delta.AbsoluteMaximum()) (delta.AbsoluteMaximumIndex())
+                    //printfn "Iter: %5d \t %10.15f"  i  (RMSE yTrain (DenseVector.ofArray(yTilde)))
 
                 let mu= metricArray.[i,*] |> Array.average
                 let sd= sqrt((metricArray.[i,*] |> Array.map (fun e -> e*e) |> Array.average) - mu*mu)
