@@ -6,7 +6,7 @@ module DataTypes
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
 
-    let raiseExcetion (x:string) = raise (System.Exception x)
+    let raiseException (x:string) = raise (System.Exception x)
 
     type VectorOrMatrix =
         | V of Vector<double>
@@ -23,7 +23,7 @@ module DataTypes
              X (int split.[0],double split.[1])
 
     let parseRegressionVariable (e:string) =
-        if e.StartsWith "+"  then raiseExcetion "incorrect response variable type"
+        if e.StartsWith "+"  then raiseException "incorrect response variable type"
         else if e.Contains(":") 
         then 
             let split = e.Split [|':'|]
@@ -64,7 +64,7 @@ module DataTypes
             match response with
                 | "binary" -> parseClassificationVariable
                 | "continuous" -> parseRegressionVariable
-                | _ -> raiseExcetion "resposne variable must be either binary for classification for continuous for regression"
+                | _ -> raiseException "resposne variable must be either binary for classification for continuous for regression"
         
         let parseLine (line : string) =
             line.Split ([|' ';'\t'|], System.StringSplitOptions.RemoveEmptyEntries) |> Array.map parseVariable
@@ -73,7 +73,7 @@ module DataTypes
             if row.Length=1 
             then (match row.[0] with 
                  |Y y -> y 
-                 |_ ->  raiseExcetion "missing label" ), Map.empty 
+                 |_ ->  raiseException "missing label" ), Map.empty 
             else (match row.[0] with 
                  |Y y -> y 
                  |_ -> raiseExcetion "missing label" ), (row.[1..] |> Seq.ofArray |> Seq.choose 
@@ -104,7 +104,7 @@ module DataTypes
             Seq.length allRows
 
         member this.CreateFold k seed  =
-            if k>=this.N then raiseExcetion "too many folds"
+            if k>=this.N then raiseException "too many folds"
             else
                 let rnd = System.Random(seed)
                 allRows |> Seq.groupBy (fun _ -> rnd.Next() % k) |> Map.ofSeq
