@@ -8,9 +8,8 @@ module GLM
     let predictMatchGLM (link:Vector<double>) (family:string) (value:string)= 
         match value,family with
         | "link",_ -> link
-        | "response", "gaussian" -> link
-        | "response", "Gaussian" -> link
-        | "response", "binomial" -> logistic(link)
+        | "response", InvariantEqual "Gaussian" -> link
+        | "response", InvariantEqual "binomial" -> logistic(link)
         | _ -> raiseException "predict either link or response"
 
 
