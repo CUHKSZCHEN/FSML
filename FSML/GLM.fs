@@ -17,6 +17,6 @@ module GLM
     type model()=
         abstract Family: string with get
         abstract Penalty: string with get
-        abstract member Fit: unit -> unit
+        abstract member Fit: ?decomposition:string -> unit
         abstract member Predict: Vector<double> * ?value:string -> Vector<double>
         abstract member Predict: Matrix<double> * ?value:string -> Vector<double>
