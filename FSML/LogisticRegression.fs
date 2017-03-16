@@ -21,7 +21,7 @@ module LogisticRegression
             WeightedQRUpdate xWith1 z w, -loglik
         
                 
-        override this.Family = "binomial"
+        override this.Family = "Logistic regression"
         override this.Penalty = "None"
 
         member this.Predict (x:Vector<double>) = 
@@ -34,13 +34,18 @@ module LogisticRegression
         override this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinear(this.Beta.[1..],V x) + this.Beta.[0]
-            predictMatchGLM link (this.Family) value
-
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic
+            | _ -> raiseException "predict either link or response"
 
         override this.Predict(x:Matrix<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinear(this.Beta.[1..],M x) + this.Beta.[0]
-            predictMatchGLM link (this.Family) value
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic
+            | _ -> raiseException "predict either link or response"
 
 
         member val eps = 1e-16 with get,set
@@ -57,7 +62,7 @@ module LogisticRegression
         let n= y.Count
         let Lambda=lambda 
         let EPS = 1e-6
-        let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
+        let checkLambda = if Lambda < 0.0 then raiseException "lambda should be positive"
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
         let normalizedXwith1= normalizedX.InsertColumn(0, DenseVector.create x.RowCount 1.0)
@@ -87,7 +92,7 @@ module LogisticRegression
         member val maxIter = 1000 with get,set
         member val minIter = 10 with get,set
         member val Beta = (DenseVector.zero (x.ColumnCount+1)) with get,set
-        override this.Family = "binomial"
+        override this.Family = "Logistic regression"
         override this.Penalty = "L2"
         override this.Fit () = 
             this.Beta <- (update reWeightedUpdate this.Beta this.eps 1 this.maxIter this.minIter 0.0)
@@ -102,14 +107,18 @@ module LogisticRegression
         override this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinearScale(this.Beta.[1..],V x,mu,sigma ) + this.Beta.[0] 
-            predictMatchGLM link (this.Family) value
-
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic 
+            | _ -> raiseException "predict either link or response"
 
         override this.Predict(x:Matrix<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinearScale(this.Beta.[1..],M x,mu,sigma ) + this.Beta.[0] 
-            predictMatchGLM link (this.Family) value
-
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic
+            | _ -> raiseException "predict either link or response"
 
     type LRLasso (xTrain:Matrix<double>,yTrain:Vector<double>,lambda)=
         inherit model()
@@ -117,7 +126,7 @@ module LogisticRegression
         let n= y.Count
         let Lambda=lambda 
         let EPS = 1e-6
-        let checkLambda = if Lambda < 0.0 then raiseExcetion "lambda should be positive"
+        let checkLambda = if Lambda < 0.0 then raiseException "lambda should be positive"
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
         let normalizedXwith1= normalizedX.InsertColumn(0, DenseVector.create x.RowCount 1.0)
@@ -152,7 +161,7 @@ module LogisticRegression
             do printfn "Real Loglikelihood: %10.15f \t loss: %10.15f" (loglik_new) loss_new
             beta, loss_new
 
-        override this.Family = "binomial"
+        override this.Family = "Logistic regression"
         override this.Penalty = "L1"
         member val eps = 1e-16 with get,set
         member val maxIter = 1000 with get,set
@@ -165,10 +174,15 @@ module LogisticRegression
         override this.Predict(x:Vector<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinearScale(this.Beta.[1..],V x,mu,sigma ) + this.Beta.[0] 
-            predictMatchGLM link (this.Family) value
-
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic 
+            | _ -> raiseException "predict either link or response"
 
         override this.Predict(x:Matrix<double>,?value:string) = 
             let value = defaultArg value "link"
             let link = predictLinearScale(this.Beta.[1..],M x,mu,sigma ) + this.Beta.[0] 
-            predictMatchGLM link (this.Family) value
+            match value with 
+            | "link" -> link
+            | "response" -> link |> logistic
+            | _ -> raiseException "predict either link or response"
