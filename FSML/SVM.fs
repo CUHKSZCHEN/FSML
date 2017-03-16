@@ -11,7 +11,7 @@ module SVM
         let Y = y*2.0-1.0
         let tol = 1e-3
         let EPS = 1e-5
-        let checkC = if C < 0.0 then raiseExcetion "C should be non-negative"
+        let checkC = if C < 0.0 then raiseException "C should be non-negative"
         let mu,sigma = x|> getNormalizeParameter
         let normalizedX=normalize ((M x), mu , sigma)
         let maxPass=5
@@ -23,7 +23,7 @@ module SVM
         let KernelFunc = match K with
                             |"linear" -> linearKernel
                             |"rbf" -> rbfKernel
-                            |_ -> raiseExcetion "please choose either linear or rbf kernel"
+                            |_ -> raiseException "please choose either linear or rbf kernel"
         
         let KernelMatrix = DenseMatrix.create n n 0.0
         do
