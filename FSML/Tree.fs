@@ -5,7 +5,7 @@ module Tree
     open MathNet.Numerics
     open MathNet.Numerics.LinearAlgebra
 
-    type node = {mutable nodeId:int; mutable featureId:int; mutable splitValue:double; mutable leafValue:double; mutable isLeaf:bool}
+    type node = {mutable nodeId:int; mutable featureId:int option; mutable splitValue:double option; mutable leafValue:double option; mutable isLeaf:bool}
 
     type tree<'node>  =
         | Empty
@@ -23,8 +23,8 @@ module Tree
         | Empty,_ -> 0.0
         | TreeNode(head,left,right),_ ->
             match head.isLeaf with
-            | true -> head.leafValue
-            | _ -> if x.[head.featureId]<= head.splitValue then predictTree left x else predictTree right x
+            | true -> head.leafValue.Value
+            | _ -> if x.[head.featureId.Value]<= head.splitValue.Value then predictTree left x else predictTree right x
     
 
     let predictForestforVector forest (x:Vector<double>)  = forest |> Array.map (fun tree -> predictTree tree x ) |> Array.sum
@@ -105,13 +105,13 @@ module Tree
                                 wTilde.[index] <- wRightScaled
                                 xInLeftNode.[index] <- false
                                    
-                    let currentNode = {nodeId=nodeId.[0]; featureId=bestFeature;splitValue=bestBreak;leafValue=0.0;isLeaf=false}
+                    let currentNode = {nodeId=nodeId.[0]; featureId= Some bestFeature;splitValue= Some bestBreak;leafValue=Some 0.0;isLeaf=false}
                     nodeId.[0] <- nodeId.[0]+1
-                    let mutable leftTree = TreeNode({nodeId=nodeId.[0]; featureId= -1;splitValue=0.0;leafValue=wLeftScaled;isLeaf=true},Empty,Empty)
+                    let mutable leftTree = TreeNode({nodeId=nodeId.[0]; featureId= None;splitValue= Some 0.0;leafValue= Some wLeftScaled;isLeaf=true},Empty,Empty)
                     leftTree <- growTree leftTree nodeId fInTree xInLeftNode (maxDepth-1) xValueSorted xIndexSorted y wTilde gTilde hTilde eta lambda gamma
 
                     nodeId.[0] <- nodeId.[0]+1
-                    let mutable rightTree = TreeNode({nodeId=nodeId.[0];featureId= -1;splitValue=0.0;leafValue=wRightScaled;isLeaf=true},Empty,Empty)
+                    let mutable rightTree = TreeNode({nodeId=nodeId.[0];featureId= None;splitValue= Some 0.0;leafValue= Some wRightScaled;isLeaf=true},Empty,Empty)
                     rightTree <- growTree rightTree nodeId fInTree xInRightNode (maxDepth-1) xValueSorted xIndexSorted y wTilde gTilde hTilde eta lambda gamma
 
                     TreeNode(currentNode,leftTree,rightTree)
