@@ -36,7 +36,7 @@ A machine learning project written in F#
 
 We use the data /data/continuous.txt, which is stored in the libsvm format. Please note that no imputation is implemented at this time so missing values in the data file would throw exceptions.
 
-If the calculation fails, set the decomposition parameter in Fit() to 'svd' may help. 
+If the calculation fails for no penalty or Ridge regression, set the decomposition parameter in Fit() to 'svd' may help. It does not help for L1 regression.
 
 ```fsharp
 open DataTypes
@@ -67,7 +67,7 @@ let main argv =
 
     // train a linear regression with L2 penalty, i.e., ridge linear regression
     let lml2= new LMRidge(xTrain,yTrain,0.2) // lambda = 0.2 is the penalty parameter
-    do lml2.Fit()
+    do lml2.Fit('svd')
     let pTrainl2 = lml2.Predict xTrain // make prediction on training data
     let pTestl2 = lml2.Predict xTest // make prediction on testing data
     let rmseTrainl2=RMSE yTrain pTrainl2 // compute RMSE on training data
@@ -93,8 +93,7 @@ let main argv =
 ### 2. Logistic regression
 
 We use the data /data/binary.txt, which is stored in the libsvm format.
-If the calculation fails, set the decomposition parameter in Fit() to 'svd' may help. 
-
+If the calculation fails for no penalty or Ridge regression, set the decomposition parameter in Fit() to 'svd' may help. It does not help for L1 regression.
 
 ```fsharp
 open DataTypes
@@ -125,7 +124,7 @@ let main argv =
 
     // train a logistic regression with L2 penalty, i.e., ridge logistic regression
     let lrl2= new LRRidge(xTrain,yTrain,0.2) // lambda = 0.2 is the penalty parameter
-    do lrl2.Fit()
+    do lrl2.Fit('svd')
     let pTrainl2 = lrl2.Predict xTrain // make prediction on training data
     let pTestl2 = lrl2.Predict xTest // make prediction on testing data
     let aucTrainl2 =AUC yTrain pTrainl2 // compute auc on training data
