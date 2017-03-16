@@ -215,15 +215,16 @@ let main argv =
     let xTest,yTest= datFold.Test fold
     
     // train a gbm model with the following parameters:
-    // number of trees: 5
+    
     // depth of each tree: 4
     // learning rate: 0.2
-    // regularization parameter lambda: 0.1
+    // regularization parameter lambda: 1.0
     // regularization parameter gamma: 0.0
     // row(sample wise) subsample ratio: 0.7
     // col(feature wise) subsample ratio 0.6
     
     let gbm = GBM (xTrain,yTrain,"binomial",4,0.2,1.0,0.0,0.7,0.6)
+    // number of trees: 100
     gbm.Fit(100)
     let pred = gbm.Predict (xTest ,"response")
     printfn "AUC: %A \t logloss: %A" (AUC yTest pred) (logloss yTest pred)
