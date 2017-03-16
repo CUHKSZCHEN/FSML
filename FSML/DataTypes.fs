@@ -43,7 +43,7 @@ module DataTypes
 
         member this.GetTest (fold: int)= foldedData .[fold]
 
-        member this.GetColumn (f:int) (rows:seq<Map<int,double>>)=seq {for row in rows -> (if row.ContainsKey f then row.[f] else raiseExcetion "missing value" )}
+        member this.GetColumn (f:int) (rows:seq<Map<int,double>>)=seq {for row in rows -> (if row.ContainsKey f then row.[f] else raiseException "missing value" )}
 
         member this.Train (fold:int)=
             this.GetTrain fold |> List.ofSeq |> List.unzip |> 
@@ -76,7 +76,7 @@ module DataTypes
                  |_ ->  raiseException "missing label" ), Map.empty 
             else (match row.[0] with 
                  |Y y -> y 
-                 |_ -> raiseExcetion "missing label" ), (row.[1..] |> Seq.ofArray |> Seq.choose 
+                 |_ -> raiseException "missing label" ), (row.[1..] |> Seq.ofArray |> Seq.choose 
                     (fun x -> match x with     
                                 |X (feature,value) -> Some (feature,value)
                                 |_ -> None ) |> Map.ofSeq)
