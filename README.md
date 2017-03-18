@@ -22,7 +22,7 @@ A machine learning project in F#
   - Gradient Boosting Machine (GBM) (**some bugs to fix**)
     * Gaussian response, i.e., least square loss function
     * Binomial response, i.e., logloss loss function
-    * cross validation fit
+    * Cross validation fit
 
 
 ### Algorithms todo list:
