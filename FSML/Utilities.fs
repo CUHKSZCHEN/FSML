@@ -8,7 +8,16 @@ module Utilities
     
     let (|InvariantEqual|_|) (str:string) arg =
         if String.Compare(str,arg,StringComparison.OrdinalIgnoreCase) =0 then Some() else None
-
+    
+    let shuffle (n:int) (rnd:Random)=
+        let arr = [|0..n-1|]
+        for i = n-1 downto 1 do
+            let j = rnd.Next() % (i+1)
+            let temp = arr.[i]
+            arr.[i] <- arr.[j]
+            arr.[j] <- temp
+        arr
+    
     let predictWith1 (beta:Vector<double>, xWith1:Matrix<double>)= xWith1 * beta
 
     let normalize (x:VectorOrMatrix,mu:Vector<double>,sd:Vector<double>) =
