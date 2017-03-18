@@ -41,7 +41,7 @@ module Tree
 
     let splitNode (fInTree: bool[], xInNode: bool [], xValueSorted: double [][], xIndexSorted: int [][],gTilde: double [],hTilde: double [],lambda:double,gamma:double) = 
         let mutable score= 0.0
-        let mutable bestFeature,bestBreak,bestIndex = 0,0.0,0
+        let mutable bestFeature,bestBreak,bestLoc = 0,0.0,0
         let mutable wLeft, wRight = 0.0,0.0
         let mutable doSplit = false
         let nIn = xInNode |> Array.map (fun e -> if e then 1 else 0) |> Array.sum
@@ -55,27 +55,35 @@ module Tree
         for k in [0..ncol-1] do
             if fInTree.[k] then
                 let mutable nLeft = 0
+                let mutable gValue,hValue = 0.0, 0.0
+                let mutable previousLoc = [0..nrow-1] |> Seq.tryFind (fun e -> xInNode.[xIndexSorted.[k].[e]]) //xValueSorted.[k].[0]-1.0
+                let mutable previousValue = xValueSorted.[k].[previousLoc.Value]
                 let mutable gLeft,gRight,hLeft,hRight = 0.0,0.0,0.0,0.0
                 for i in [0..nrow-1] do
+
                     let index = xIndexSorted.[k].[i]
                     if (xInNode.[index] && (nLeft < nIn-1)) then
+                        if xValueSorted.[k].[i] <> previousValue then
+                            let scoreNew = (gLeft * gLeft)/(hLeft+lambda) + (gRight*gRight)/(hRight+lambda) - refScore
+                            if scoreNew > score then
+
+                                doSplit <- true
+                                score <- scoreNew
+                                bestFeature <- k
+                                bestBreak <- previousValue
+                                bestLoc <- previousLoc.Value
+                                wLeft <- (- gLeft/(hLeft + lambda))
+                                wRight <- (- gRight/(hRight + lambda))
+
+                            previousValue <- xValueSorted.[k].[i]
+                        previousLoc <- Some i
+
                         nLeft <- nLeft + 1 
                         gLeft <- gLeft + gTilde.[index]
                         gRight <- g - gLeft
                         hLeft <- hLeft + hTilde.[index]
                         hRight <- h - hLeft
-                        let scoreNew = (gLeft * gLeft)/(hLeft+lambda) + (gRight*gRight)/(hRight+lambda) - refScore
-
-                        if scoreNew > score then
-                            doSplit <- true
-                            score <- scoreNew
-                            bestFeature <- k
-                            bestBreak <- xValueSorted.[k].[i]
-                            bestIndex <- i
-                            wLeft <- (- gLeft/(hLeft + lambda))
-                            wRight <- (- gRight/(hRight + lambda))
-
-        doSplit && (0.5*score > gamma),bestFeature,bestBreak,bestIndex,wLeft,wRight,score
+        doSplit && (0.5*score > gamma),bestFeature,bestBreak,bestLoc,wLeft,wRight,score
 
 
     let rec growTree (currentTree: tree<node>) (nodeId: int []) (fInTree: bool []) (xInNode: bool [])  (maxDepth:int) (xValueSorted: double [][]) (xIndexSorted: int [][]) (y: double []) (wTilde: double []) (gTilde: double []) (hTilde: double []) (eta:double) (lambda:double) (gamma:double)=
@@ -86,7 +94,7 @@ module Tree
             match currentTree with
             | Empty -> 
 
-                let doSplit,bestFeature,bestBreak,bestIndex,wLeft,wRight,score = splitNode (fInTree,xInNode,xValueSorted,xIndexSorted,gTilde,hTilde,lambda,gamma)
+                let doSplit,bestFeature,bestBreak,bestLoc,wLeft,wRight,score = splitNode (fInTree,xInNode,xValueSorted,xIndexSorted,gTilde,hTilde,lambda,gamma)
                 let wLeftScaled= wLeft * eta
                 let wRightScaled= wRight * eta
                 if doSplit then
@@ -96,7 +104,7 @@ module Tree
                     for i in [0..nrow-1] do
                         let index = xIndexSorted.[bestFeature].[i]
                         if xInNode.[index] then
-                            if i <= bestIndex then 
+                            if i <= bestLoc then 
                                 xInLeftNode.[index] <- true
                                 wTilde.[index] <- wLeftScaled
                                 xInRightNode.[index] <- false
