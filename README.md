@@ -12,7 +12,7 @@ A machine learning project in F#
     * no penalty
     * Lasso (L1 penalty) via coordinate descent
     * Ridge (L2 penalty)
-  - Logistic Regression
+  - Logistic Regression (**can be improved by using the algorithm described in http://bwlewis.github.io/GLM/**)
     * no penalty
     * Lasso (L1 penalty) via coordinate descent
     * Ridge (L2 penalty) via iterated reweighted least square
