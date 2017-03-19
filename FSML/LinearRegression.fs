@@ -90,8 +90,9 @@ module LinearRegression
             else (STO z lambda)
 
         let cyclicCoordinateDescentUpdate (beta:Vector<double>)=
-            for i in [0..beta.Count-1] do 
+            [0..beta.Count-1] |> List.iter (fun i ->
                 beta.Item(i) <- (coordinateDescent beta i)
+                )
             let yiTilde = predictWith1 (beta, normalizedXwith1)
             let J = (y-yiTilde)*(y-yiTilde)/(double n)/2.0  
             let loss = J + (beta.[1..].Map (fun e -> abs(e))).Sum()*Lambda
