@@ -22,9 +22,9 @@ module Tree
         match tree, x with
         | Empty,_ -> 0.0
         | TreeNode(head,left,right),_ ->
-            match head.isLeaf with
-            | true -> head.leafValue.Value
-            | _ -> if x.[head.featureId.Value]<= head.splitValue.Value then predictTree left x else predictTree right x
+            if head.isLeaf then head.leafValue.Value
+            elif x.[head.featureId.Value]<= head.splitValue.Value then predictTree left x 
+            else predictTree right x
     
 
     let predictForestforVector forest (x:Vector<double>)  = forest |> Array.map (fun tree -> predictTree tree x ) |> Array.sum
