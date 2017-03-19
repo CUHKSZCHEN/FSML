@@ -26,11 +26,13 @@ module SVM
                             |_ -> raiseException "please choose either linear or rbf kernel"
         
         let KernelMatrix = DenseMatrix.create n n 0.0
-        do
-            for i in [0..n-1] do
-                for j in [0..n-1] do
-                    KernelMatrix.[i,j] <- KernelFunc (i,j)
-        
+
+        let initKernal = [0..n-1] |> List.iter (fun i ->
+            [0..n-1] |> List.iter (fun j ->
+                KernelMatrix.[i,j] <- KernelFunc (i,j)
+                )
+            )
+
         new (x,y,C) = SVM(x,y,C,"linear",1.0)
 
         member private this.f (i:int) = (KernelMatrix.Column(i)).* Y*this.Alpha + this.b
@@ -40,7 +42,7 @@ module SVM
             else max 0.0 (alphaJ+alphaI-C), min C (alphaI+alphaJ)
 
         member private this.eta(i:int,j:int)=
-            2.0*KernelMatrix. [i,j] - KernelMatrix. [i,i] - KernelMatrix. [j,j]
+            2.0*KernelMatrix.[i,j] - KernelMatrix.[i,i] - KernelMatrix.[j,j]
 
         member val Alpha = (DenseVector.zero (n)) with get,set
         member val b=0.0 with get,set
@@ -52,12 +54,14 @@ module SVM
         member this.Predict (x:Matrix<double>) =
             let testMatrix = DenseMatrix.create x.RowCount n 0.0
             let testNormalized=normalize ((M x), mu, sigma)
-            for i in [0..x.RowCount-1] do
-                for j in [0..n-1] do
-                    if K="linear" then
-                        testMatrix.[i,j] <- normalizedX.Row(j)*testNormalized.Row(i)
-                    else
-                        testMatrix.[i,j] <- exp (-(normalizedX.Row(j)*normalizedX.Row(j)+testNormalized.Row(i)*testNormalized.Row(i)-2.0*testNormalized.Row(i)*normalizedX.Row(j))/2.0/var)
+            [0..x.RowCount-1] |> List.iter (fun i ->
+                [0..n-1] |> List.iter (fun j ->
+                    match K with
+                        | InvariantEqual "linear" -> testMatrix.[i,j] <- normalizedX.Row(j)*testNormalized.Row(i)
+                        | InvariantEqual "rbf" -> testMatrix.[i,j] <- exp (-(normalizedX.Row(j)*normalizedX.Row(j)+testNormalized.Row(i)*testNormalized.Row(i)-2.0*testNormalized.Row(i)*normalizedX.Row(j))/2.0/var)
+                        | _ -> raiseException "please choose either linear or rbf kernel"
+                )
+            )
             (testMatrix*(Y.*this.Alpha)+this.b).Map (fun e-> if e>0.0 then 1.0 else -1.0)
 
         member private this.E (i:int)= this.f i - Y.[i]
@@ -68,8 +72,7 @@ module SVM
         member private this.update (iter:int)=
             //printfn "%A" iter
             let mutable pass=0
-            for i in [0..n-1] do
-                pass<- pass + ( this.updateSingle i)
+            [0..n-1] |> List.iter (fun i -> pass<- pass + ( this.updateSingle i))
             if pass = 0 then iter+1 else 0
         
         member private this.updateAlphaI (i:int,j:int,alphaOldI,alphaOldJ,alphaJ,Ei,Ej)=
