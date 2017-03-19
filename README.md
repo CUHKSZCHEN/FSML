@@ -5,7 +5,7 @@ A machine learning project in F#
 ## Introduction
 
 ### Version
-0.1.2
+0.2.0
 
 ### Algorithms implemented:
   - Linear Regression
