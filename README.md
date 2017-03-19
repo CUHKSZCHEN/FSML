@@ -12,14 +12,14 @@ A machine learning project in F#
     * no penalty
     * Lasso (L1 penalty) via coordinate descent
     * Ridge (L2 penalty)
-  - Logistic Regression (**can be improved by using the algorithm described in http://bwlewis.github.io/GLM/**)
+  - Logistic Regression (**may be improved by using the algorithm described in http://bwlewis.github.io/GLM/**)
     * no penalty
     * Lasso (L1 penalty) via coordinate descent
     * Ridge (L2 penalty) via iterated reweighted least square
   - SVM via Sequential Minimal Optimization (SMO)
     * linear kernel
     * rbf(Gaussian) kernel 
-  - Gradient Boosting Machine (GBM) (**the current implementation is not fast**)
+  - Gradient Boosting Machine (GBM) (**the current implementation is not very fast**)
     * Gaussian response, i.e., least square loss function
     * Binomial response, i.e., logloss loss function
     * Cross validation fit
