@@ -126,10 +126,8 @@ module Tree
                     TreeNode(currentNode,leftTree,rightTree)
                 else Empty
             | TreeNode(head,left,right) ->
-                match head.isLeaf with
-                | true -> 
-                    let newNode = growTree Empty nodeId fInTree xInNode maxDepth xValueSorted xIndexSorted y wTilde gTilde hTilde eta lambda gamma
-                    match newNode with
+                if head.isLeaf then
+                    match growTree Empty nodeId fInTree xInNode maxDepth xValueSorted xIndexSorted y wTilde gTilde hTilde eta lambda gamma with
                     | Empty -> currentTree
-                    | _ -> newNode
-                | _ -> raiseException "try to split a node which is not a leaf"
+                    | newNode -> newNode
+                else raiseException "try to split a node which is not a leaf"
