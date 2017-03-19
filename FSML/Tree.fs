@@ -52,15 +52,14 @@ module Tree
 
         let refScore = (g*g)/(h+lambda)
 
-        for k in [0..ncol-1] do
+        [0..ncol-1] |> List.iter (fun k ->
             if fInTree.[k] then
                 let mutable nLeft = 0
                 let mutable gValue,hValue = 0.0, 0.0
-                let mutable previousLoc = [0..nrow-1] |> Seq.tryFind (fun e -> xInNode.[xIndexSorted.[k].[e]]) //xValueSorted.[k].[0]-1.0
+                let mutable previousLoc = [0..nrow-1] |> Seq.tryFind (fun e -> xInNode.[xIndexSorted.[k].[e]])
                 let mutable previousValue = xValueSorted.[k].[previousLoc.Value]
                 let mutable gLeft,gRight,hLeft,hRight = 0.0,0.0,0.0,0.0
-                for i in [0..nrow-1] do
-
+                [0..nrow-1] |> List.iter (fun i ->
                     let index = xIndexSorted.[k].[i]
                     if (xInNode.[index] && (nLeft < nIn-1)) then
                         if xValueSorted.[k].[i] <> previousValue then
@@ -83,6 +82,8 @@ module Tree
                         gRight <- g - gLeft
                         hLeft <- hLeft + hTilde.[index]
                         hRight <- h - hLeft
+                    )
+            )
         doSplit && (0.5*score > gamma),bestFeature,bestBreak,bestLoc,wLeft,wRight,score
 
 
@@ -101,7 +102,7 @@ module Tree
                     let xInLeftNode = Array.copy xInNode
                     let xInRightNode = Array.copy xInNode
         
-                    for i in [0..nrow-1] do
+                    [0..nrow-1] |> List.iter (fun i->
                         let index = xIndexSorted.[bestFeature].[i]
                         if xInNode.[index] then
                             if i <= bestLoc then 
@@ -112,7 +113,7 @@ module Tree
                                 xInRightNode.[index] <- true
                                 wTilde.[index] <- wRightScaled
                                 xInLeftNode.[index] <- false
-                                   
+                        )          
                     let currentNode = {nodeId=nodeId.[0]; featureId= Some bestFeature;splitValue= Some bestBreak;leafValue=Some 0.0;isLeaf=false}
                     nodeId.[0] <- nodeId.[0]+1
                     let mutable leftTree = TreeNode({nodeId=nodeId.[0]; featureId= None;splitValue= Some 0.0;leafValue= Some wLeftScaled;isLeaf=true},Empty,Empty)
