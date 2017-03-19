@@ -22,7 +22,7 @@ module GBM
 
         let checkEta = if eta < 0.0 then raiseException "please choose a positive learning rate eta"
         let checkLambda = if lambda < 0.0 then raiseException "please choose a positive lambda"
-        let checkGamma = if gamma < 0.0 then raiseException "please choose a positive gamm"
+        let checkGamma = if gamma < 0.0 then raiseException "please choose a positive gamma"
         let checkSub_sample = if sub_sample <= 0.0 || sub_sample>1.0 then raiseException "please choose sub_sample from 0.0 to 1.0"
         let checkSub_feature = if sub_feature <= 0.0 || sub_sample>1.0 then raiseException "please choose sub_feature from 0.0 to 1.0"
 
