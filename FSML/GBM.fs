@@ -22,7 +22,7 @@ module GBM
 
         let checkEta = if eta < 0.0 then raiseException "please choose a positive learning rate eta"
         let checkLambda = if lambda < 0.0 then raiseException "please choose a positive lambda"
-        let checkGamma = if gamma < 0.0 then raiseException "please choose a positive gamma"
+        let checkGamma = if gamma < 0.0 then raiseException "please choose a positive gamm"
         let checkSub_sample = if sub_sample <= 0.0 || sub_sample>1.0 then raiseException "please choose sub_sample from 0.0 to 1.0"
         let checkSub_feature = if sub_feature <= 0.0 || sub_sample>1.0 then raiseException "please choose sub_feature from 0.0 to 1.0"
 
@@ -50,7 +50,7 @@ module GBM
             this.Forest <- Array.create maxTrees Empty
             let wTilde = Array.create yTrain.Count 0.0
 
-            for i in [0..maxTrees-1] do
+            [0..maxTrees-1] |> List.iter (fun i ->
                 let nodeId = [|0|]
 
                 let xInNode = Array.init n (fun _ -> rnd.NextDouble() <= sub_sample)
@@ -61,14 +61,15 @@ module GBM
                 match this.Forest.[i] with
                     | Empty -> ()
                     | _ -> 
-                        for j in [0..n-1] do
+                        [0..n-1] |> List.iter (fun j ->
                             if xInNode.[j] then
                                 yTilde.[j] <- yTilde.[j] + wTilde.[j]
                             else yTilde.[j] <- yTilde.[j] + predictTree this.Forest.[i] (x.Row(j))
                             let gt,ht= gh y.[j] yTilde.[j]
                             gTilde.[j] <- gt 
                             hTilde.[j] <- ht 
-            
+                        )
+                )
         member this.CVFit (metric:string, nTrees:int ,?nFolds:int, ?earlyStopRounds:int,?seed:int)=
             let seed= defaultArg seed 1
             let rnd= this.RND seed
@@ -101,9 +102,9 @@ module GBM
             let yTildeCVs = [|for f in 0..nFolds-1 do yield (foldArray |> Array.map (fun e -> if e <> f then w0s.[f] else 0.0 ))|]
             let gTildeCVs,hTildeCVs = [| for f in 0..nFolds-1 do yield ([for i in 0..(n-1) -> gh y.[i] yTildeCVs.[f].[i]] |> List.unzip |> fun (g,h) -> Array.ofList(g) ,Array.ofList(h) )|] |> Array.unzip
             
-            for i in [0..nTrees-1] do
+            [0..nTrees-1] |> List.iter (fun i ->
 
-                for f in [0..nFolds-1] do
+                [0..nFolds-1] |> List.iter (fun f ->
                     let nodeId = [|0|]
                     let xInNode = Array.init n (fun index -> (rnd.NextDouble() <= sub_sample) && (foldArray.[index]<>f))
                     let fInTreeArray = shuffle x.ColumnCount rnd |> Seq.take nf
@@ -114,7 +115,7 @@ module GBM
                     match cvForests.[i,f] with
                         | Empty -> ()
                         | _ -> 
-                            for j in [0..n-1] do
+                            [0..n-1] |> List.iter (fun j ->
                                 if foldArray.[j] <>f then
                                     if xInNode.[j] then
                                         yTildeCVs.[f].[j] <- yTildeCVs.[f].[j] + wTildeCVs.[f].[j]
@@ -123,18 +124,21 @@ module GBM
                                     let gt,ht= gh y.[j] yTildeCVs.[f].[j]
                                     gTildeCVs.[f].[j] <- gt 
                                     hTildeCVs.[f].[j] <- ht 
+                                )
                     inMetricArray.[i,f] <- metricFun (y |>Array.indexed |> Array.filter (fun (ii, _) -> foldArray.[ii] <>f) |> Array.map snd |> DenseVector.ofArray) (predictMatch (yTildeCVs.[f] |>Array.indexed |> Array.filter (fun (ii, _) -> foldArray.[ii] <>f) |> Array.map snd |> DenseVector.ofArray)  "response")
 
                     yHatInFold.[f] <- yHatInFold.[f] + this.Predict(x, cvForests.[i,f],foldArray, f) 
                     outMetricArray.[i,f] <- metricFun yInFold.[f] (predictMatch yHatInFold.[f] "response")
-                
+                    )
+
                 let muIn = inMetricArray.[i,*] |> Array.average
                 let sdIn = sqrt((inMetricArray.[i,*] |> Array.map (fun e -> e*e) |> Array.average) - muIn*muIn)
 
                 let muOut = outMetricArray.[i,*] |> Array.average
                 let sdOut = sqrt((outMetricArray.[i,*] |> Array.map (fun e -> e*e) |> Array.average) - muOut*muOut)
                 printfn "Iter: %5d \t %s \t Train: %10.10f+%5.5f \t Test: %10.10f+%5.5f" i metric muIn sdIn muOut sdOut
-        
+            )
+
         member private this.Predict(x:Matrix<double>, oneTree: tree<node>, foldArray: int[], fold: int) = 
             DenseVector.ofArray( predictTreeforMatrixInFold oneTree x foldArray fold)
 
