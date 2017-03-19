@@ -159,9 +159,10 @@ module LogisticRegression
             do weight <- Vector.map2 (fun e k -> if abs(e)<EPS then EPS else if abs(e)+EPS>1.0 then EPS else k) p w
             do response <- eta + (y - pNew)./weight
 
-            for i in [0..beta.Count-1] do 
+            [0..beta.Count-1] |> List.iter (fun i ->
                 beta.Item(i) <- (coordinateDescent beta i)
-
+                )
+                
             let eta_new = predictWith1 (beta, normalizedXwith1)
 
             let loglik_new = Loglik eta_new y
