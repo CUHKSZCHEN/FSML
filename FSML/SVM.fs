@@ -54,10 +54,12 @@ module SVM
         member this.Predict (x:Matrix<double>) =
             let testMatrix = DenseMatrix.create x.RowCount n 0.0
             let testNormalized=normalize ((M x), mu, sigma)
-			let kernelCalculation i j = match K with
+	    
+	    let kernelCalculation i j = match K with
                         | InvariantEqual "linear" -> normalizedX.Row(j)*testNormalized.Row(i)
                         | InvariantEqual "rbf" -> exp (-(normalizedX.Row(j)*normalizedX.Row(j)+testNormalized.Row(i)*testNormalized.Row(i)-2.0*testNormalized.Row(i)*normalizedX.Row(j))/2.0/var)
                         | _ -> raiseException "please choose either linear or rbf kernel"
+			
             [0..x.RowCount-1] |> List.iter (fun i ->
                 [0..n-1] |> List.iter (fun j ->
                         testMatrix.[i,j] <- kernelCalculation i j
