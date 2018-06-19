@@ -19,7 +19,7 @@ A machine learning project in F#
   - SVM via Sequential Minimal Optimization (SMO)
     * linear kernel
     * rbf(Gaussian) kernel 
-  - Gradient Boosting Machine (GBM) (**the current implementation is not very fast**)
+  - Gradient Boosting Machine (GBM) (**Some bugs to fix**)
     * Gaussian response, i.e., least square loss function
     * Binomial response, i.e., logloss loss function
     * Cross validation fit
